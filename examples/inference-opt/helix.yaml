@@ -1,0 +1,36 @@
+name: inference-opt
+version: 1.0.0
+domain: AI/ML
+description: >
+  Maximize WikiText-2 inference throughput (tokens/sec) for a causal language model
+  without degrading bits-per-byte (bpb). The agent modifies infer.py freely —
+  batching, quantization, torch.compile, kernel tricks, etc. are all in scope.
+author: amritkrishnan
+
+scope:
+  editable:
+    - infer.py
+  readonly:
+    - prepare.py
+    - helix.yaml
+    - program.md
+
+metrics:
+  primary:
+    name: tokens_per_sec
+    optimize: maximize
+  quality_guard:
+    name: bpb
+    optimize: minimize
+    max_degradation: 0.01
+  evaluate:
+    command: uv run infer.py
+    timeout_seconds: 300
+    output_format: pattern
+    patterns:
+      primary: '^tokens_per_sec:\s+([\d.]+)'
+      quality_guard: '^bpb:\s+([\d.]+)'
+
+requirements:
+  python: ">=3.11"
+  gpu: "L40 48GB"
