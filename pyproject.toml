@@ -101,7 +101,7 @@ ignore = [
 lines-after-imports = 2
 
 [tool.ruff.lint.pydocstyle]
-convention = "google"
+convention = "numpy"
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 120

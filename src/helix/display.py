@@ -15,14 +15,21 @@ from .results import best_kept
 def startup_panel(tag: str, max_turns: int, main_stats: dict[str, float | None], config: HelixConfig) -> Panel:
     """Build the Rich panel displayed at session start.
 
-    Args:
-        tag: Session tag (e.g. ``"mar27"``).
-        max_turns: Maximum agent turns configured for this session.
-        main_stats: Dict with ``"baseline"`` and ``"best"`` from the main branch.
-        config: Helix configuration.
+    Parameters
+    ----------
+    tag : str
+        Session tag (e.g. ``"mar27"``).
+    max_turns : int
+        Maximum agent turns for this session.
+    main_stats : dict[str, float or None]
+        Dict with ``"baseline"`` and ``"best"`` from the main branch.
+    config : HelixConfig
+        Helix configuration.
 
-    Returns:
-        A ``rich.panel.Panel`` ready to print.
+    Returns
+    -------
+    rich.panel.Panel
+        Panel ready to print to the console.
     """
     hardware = os.environ.get("HELIX_HARDWARE", "unknown")
     date_str = datetime.now().strftime("%Y-%m-%d  %H:%M")
@@ -60,13 +67,19 @@ def session_summary_panel(
 ) -> Panel:
     """Build the Rich panel displayed at session end.
 
-    Args:
-        rows: Parsed rows from results.tsv.
-        main_stats: Dict with ``"baseline"`` and ``"best"`` from the main branch.
-        config: Helix configuration.
+    Parameters
+    ----------
+    rows : list[dict[str, str]]
+        Parsed rows from results.tsv.
+    main_stats : dict[str, float or None]
+        Dict with ``"baseline"`` and ``"best"`` from the main branch.
+    config : HelixConfig
+        Helix configuration.
 
-    Returns:
-        A ``rich.panel.Panel`` ready to print.
+    Returns
+    -------
+    rich.panel.Panel
+        Panel ready to print to the console.
     """
     primary_name = config.metrics.primary.name
     main_baseline = main_stats.get("baseline")
@@ -97,7 +110,10 @@ def session_summary_panel(
     fmt = _fmt_metric(primary_name)
     t.add_row("main baseline", fmt(main_baseline))
     t.add_row("main best", fmt(main_best))
-    t.add_row("session best", f"[cyan]{session_best:.4g} {primary_name}[/cyan]" if session_best is not None else "[dim]—[/dim]")
+    t.add_row(
+        "session best",
+        f"[cyan]{session_best:.4g} {primary_name}[/cyan]" if session_best is not None else "[dim]—[/dim]",
+    )
     t.add_row("", "")
 
     if improved and session_best is not None:
@@ -111,9 +127,21 @@ def session_summary_panel(
 
 
 def _fmt_metric(name: str):  # type: ignore[no-untyped-def]
-    """Return a formatting function for a metric value display."""
+    """Return a formatting function for displaying a metric value.
+
+    Parameters
+    ----------
+    name : str
+        Metric name appended after the value.
+
+    Returns
+    -------
+    callable
+        Function from ``float | None`` to a Rich-markup string.
+    """
     def fmt(value: float | None) -> str:
         if value is None:
             return "[dim]—[/dim]"
         return f"{value:.4g} {name}"
+
     return fmt

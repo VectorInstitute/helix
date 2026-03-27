@@ -9,11 +9,19 @@ from .config import HelixConfig, OptimizeDirection
 
 
 def _tsv_header(config: HelixConfig, include_session: bool = False) -> str:
-    """Return the TSV header row for results or experiments files.
+    """Return the TSV header row, using actual metric names as column headers.
 
-    Column names for the metric columns are taken from ``config`` so that
-    every helix uses its own meaningful names (e.g. ``tokens_per_sec`` or
-    ``accuracy``) rather than generic placeholders.
+    Parameters
+    ----------
+    config : HelixConfig
+        Helix configuration (metric names are used as column headers).
+    include_session : bool, optional
+        If True, prepend a ``session`` column (for experiments.tsv).
+
+    Returns
+    -------
+    str
+        Tab-separated header string.
     """
     primary_col = config.metrics.primary.name
     qg_col = config.metrics.quality_guard.name if config.metrics.quality_guard else "quality_guard"
@@ -22,7 +30,18 @@ def _tsv_header(config: HelixConfig, include_session: bool = False) -> str:
 
 
 def _parse_tsv(path: Path) -> list[dict[str, str]]:
-    """Parse a TSV file into a list of row dicts (empty list if file missing)."""
+    """Parse a TSV file into a list of row dicts.
+
+    Parameters
+    ----------
+    path : Path
+        Path to a tab-separated file.
+
+    Returns
+    -------
+    list[dict[str, str]]
+        One dict per data row; empty list if the file is missing or has no rows.
+    """
     if not path.exists():
         return []
     lines = path.read_text().splitlines()
@@ -39,21 +58,64 @@ def _parse_tsv(path: Path) -> list[dict[str, str]]:
     return rows
 
 
+def _parse_tsv_string(content: str) -> list[dict[str, str]]:
+    """Parse TSV content from a string.
+
+    Parameters
+    ----------
+    content : str
+        Raw TSV text.
+
+    Returns
+    -------
+    list[dict[str, str]]
+        One dict per data row.
+    """
+    lines = content.splitlines()
+    if len(lines) < 2:
+        return []
+    headers = lines[0].split("\t")
+    rows: list[dict[str, str]] = []
+    for line in lines[1:]:
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        parts += [""] * max(0, len(headers) - len(parts))
+        rows.append(dict(zip(headers, parts[: len(headers)])))
+    return rows
+
+
 def read_results(path: Path) -> list[dict[str, str]]:
-    """Parse results.tsv and return a list of row dicts."""
+    """Parse results.tsv and return a list of row dicts.
+
+    Parameters
+    ----------
+    path : Path
+        Path to ``results.tsv``.
+
+    Returns
+    -------
+    list[dict[str, str]]
+        Parsed rows; empty list if file does not exist.
+    """
     return _parse_tsv(path)
 
 
 def best_kept(rows: list[dict[str, str]], config: HelixConfig) -> tuple[float | None, str | None]:
-    """Return ``(primary_metric_value, description)`` of the best kept experiment.
+    """Return the primary metric value and description of the best kept experiment.
 
-    Args:
-        rows: Parsed rows from results.tsv or experiments.tsv.
-        config: Helix configuration (used for metric name and optimize direction).
+    Parameters
+    ----------
+    rows : list[dict[str, str]]
+        Parsed rows from results.tsv or experiments.tsv.
+    config : HelixConfig
+        Used to determine metric name and optimization direction.
 
-    Returns:
-        A tuple of ``(value, description)``.  Both elements are ``None`` if no
-        kept experiments exist.
+    Returns
+    -------
+    tuple[float or None, str or None]
+        ``(value, description)`` of the best kept experiment, or ``(None, None)``
+        if no kept experiments exist.
     """
     kept = [r for r in rows if r.get("status") == "keep"]
     if not kept:
@@ -78,12 +140,18 @@ def best_kept(rows: list[dict[str, str]], config: HelixConfig) -> tuple[float | 
 def read_main_stats(main_branch: str, cwd: Path, config: HelixConfig) -> dict[str, float | None]:
     """Read baseline and best metric values from experiments.tsv on the main branch.
 
-    Args:
-        main_branch: Name of the main branch (e.g. ``"main"`` or ``"master"``).
-        cwd: Repository root.
-        config: Helix configuration.
+    Parameters
+    ----------
+    main_branch : str
+        Name of the main branch (e.g. ``"main"`` or ``"master"``).
+    cwd : Path
+        Repository root directory.
+    config : HelixConfig
+        Used to determine the metric column name and optimization direction.
 
-    Returns:
+    Returns
+    -------
+    dict[str, float or None]
         Dict with keys ``"baseline"`` and ``"best"``, each a float or ``None``.
     """
     try:
@@ -118,30 +186,19 @@ def read_main_stats(main_branch: str, cwd: Path, config: HelixConfig) -> dict[st
     return {"baseline": values[0], "best": min(values)}
 
 
-def _parse_tsv_string(content: str) -> list[dict[str, str]]:
-    """Parse TSV content from a string (same logic as _parse_tsv but from str)."""
-    lines = content.splitlines()
-    if len(lines) < 2:
-        return []
-    headers = lines[0].split("\t")
-    rows: list[dict[str, str]] = []
-    for line in lines[1:]:
-        if not line.strip():
-            continue
-        parts = line.split("\t")
-        parts += [""] * max(0, len(headers) - len(parts))
-        rows.append(dict(zip(headers, parts[: len(headers)])))
-    return rows
-
-
 def append_experiments(tag: str, rows: list[dict[str, str]], path: Path, config: HelixConfig) -> None:
     """Append session rows to experiments.tsv, creating it with a header if needed.
 
-    Args:
-        tag: Session tag (e.g. ``"mar27"``).
-        rows: Rows from results.tsv to append.
-        path: Path to experiments.tsv.
-        config: Helix configuration (used for metric column names).
+    Parameters
+    ----------
+    tag : str
+        Session tag (e.g. ``"mar27"``).
+    rows : list[dict[str, str]]
+        Rows from results.tsv to append.
+    path : Path
+        Path to ``experiments.tsv``.
+    config : HelixConfig
+        Used to determine metric column names.
     """
     primary_col = config.metrics.primary.name
     qg_col = config.metrics.quality_guard.name if config.metrics.quality_guard else "quality_guard"

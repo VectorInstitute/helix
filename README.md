@@ -1,6 +1,6 @@
 # helix
 
-**Autonomous research loops — reproducible, shareable, verifiable.**
+**Autonomous research loops. Reproducible, shareable, verifiable.**
 
 A *helix* is a self-contained research workflow where a Claude agent iteratively
 experiments on a codebase, keeps improvements, and discards failures. The git
@@ -13,7 +13,7 @@ Anyone can clone a helix, run it, and independently verify every claimed result.
 |---|---|
 | **helix** | A git repo containing `helix.yaml` + `program.md` + a codebase the agent can modify |
 | `helix.yaml` | Machine-readable spec: what to optimize, how to measure it, which files are editable |
-| `program.md` | Human-written instructions for the agent — domain knowledge, constraints, techniques |
+| `program.md` | Human-written instructions for the agent: domain knowledge, constraints, techniques to try |
 | `experiments.tsv` | Append-only ledger of every experiment: commit, metric, status, description |
 | `helix run` | CLI command that launches an autonomous session on your hardware |
 

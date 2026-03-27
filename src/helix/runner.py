@@ -37,16 +37,22 @@ console = Console()
 
 
 def find_helix_root(start: Path | None = None) -> Path:
-    """Walk up the directory tree to locate helix.yaml.
+    """Walk up the directory tree to find the directory containing ``helix.yaml``.
 
-    Args:
-        start: Directory to begin searching from (defaults to ``Path.cwd()``).
+    Parameters
+    ----------
+    start : Path, optional
+        Directory to begin searching from. Defaults to ``Path.cwd()``.
 
-    Returns:
-        The directory containing ``helix.yaml``.
+    Returns
+    -------
+    Path
+        Directory containing ``helix.yaml``.
 
-    Raises:
-        FileNotFoundError: If no ``helix.yaml`` is found in the tree.
+    Raises
+    ------
+    FileNotFoundError
+        If no ``helix.yaml`` is found in the tree.
     """
     path = start or Path.cwd()
     for directory in [path, *path.parents]:
@@ -114,7 +120,18 @@ class HelixRunner:
             sys.exit(1)
 
     def _build_prompt(self, main_stats: dict[str, float | None]) -> str:
-        """Construct the agent kickoff prompt from helix.yaml and current stats."""
+        """Construct the agent kickoff prompt from helix.yaml and current stats.
+
+        Parameters
+        ----------
+        main_stats : dict[str, float or None]
+            Baseline and best values from the main branch experiments.
+
+        Returns
+        -------
+        str
+            Full prompt string passed to the Claude agent.
+        """
         cfg = self.config
         baseline = main_stats.get("baseline")
         best = main_stats.get("best")
@@ -176,7 +193,7 @@ Read `program.md` first, then scope files, then run the unmodified baseline.
 NEVER stop or ask for confirmation. Run until interrupted."""
 
     async def _monitor_log(self) -> None:
-        """Stream run.log to the console, handling truncation between runs."""
+        """Stream run.log to the console, handling file truncation between runs."""
         pos = 0
         run_announced = False
         while True:
@@ -206,7 +223,13 @@ NEVER stop or ask for confirmation. Run until interrupted."""
             await asyncio.sleep(0.15)
 
     async def _run_agent(self, main_stats: dict[str, float | None]) -> None:
-        """Launch the Claude Opus agent and stream filtered output until done."""
+        """Launch the Claude Opus agent and stream filtered output until done.
+
+        Parameters
+        ----------
+        main_stats : dict[str, float or None]
+            Baseline and best values used to build the kickoff prompt.
+        """
         prompt = self._build_prompt(main_stats)
         keywords = self.config.interesting_keywords()
 
@@ -258,7 +281,13 @@ NEVER stop or ask for confirmation. Run until interrupted."""
                 await monitor_task
 
     def _commit_to_main(self, rows: list[dict[str, str]]) -> None:
-        """Append session experiments to main and merge improved files if applicable."""
+        """Append session experiments to main and merge improved files if applicable.
+
+        Parameters
+        ----------
+        rows : list[dict[str, str]]
+            Parsed rows from results.tsv.
+        """
         if not rows:
             return
 
@@ -310,14 +339,20 @@ NEVER stop or ask for confirmation. Run until interrupted."""
             git("checkout", original_branch, cwd=self.root, check=False)
 
     def _post_session(self, main_stats: dict[str, float | None]) -> None:
-        """Print session summary and commit improvements to main."""
+        """Print session summary and commit improvements to main.
+
+        Parameters
+        ----------
+        main_stats : dict[str, float or None]
+            Stats captured before the session started (used for delta display).
+        """
         rows = read_results(self._results_path)
         console.print()
         console.print(session_summary_panel(rows, main_stats, self.config))
         self._commit_to_main(rows)
 
     def run(self) -> None:
-        """Run a complete research session: preflight → agent → commit."""
+        """Run a complete research session: preflight → agent → post-session commit."""
         atexit.register(self._kill_experiment)
         signal.signal(signal.SIGTERM, self._sigterm_handler)
 

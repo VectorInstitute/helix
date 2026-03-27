@@ -11,18 +11,26 @@ class GitError(Exception):
 
 
 def run(*args: str, cwd: Path, check: bool = True) -> str:
-    """Run a git command in `cwd` and return stdout.
+    """Run a git command in ``cwd`` and return stdout.
 
-    Args:
-        *args: Arguments passed to git (e.g. ``"checkout"``, ``"-b"``, ``"branch"``).
-        cwd: Repository root to run the command in.
-        check: If True, raise ``GitError`` on non-zero exit.
+    Parameters
+    ----------
+    *args : str
+        Arguments passed to git (e.g. ``"checkout"``, ``"-b"``, ``"branch"``).
+    cwd : Path
+        Repository root directory.
+    check : bool, optional
+        If True (default), raise ``GitError`` on non-zero exit.
 
-    Returns:
-        Stripped stdout string.
+    Returns
+    -------
+    str
+        Stripped stdout from the git command.
 
-    Raises:
-        GitError: When ``check=True`` and the command exits non-zero.
+    Raises
+    ------
+    GitError
+        When ``check=True`` and the command exits non-zero.
     """
     result = subprocess.run(
         ["git", "-C", str(cwd), *args],
@@ -36,34 +44,77 @@ def run(*args: str, cwd: Path, check: bool = True) -> str:
 
 
 def current_branch(cwd: Path) -> str:
-    """Return the name of the currently checked-out branch."""
+    """Return the name of the currently checked-out branch.
+
+    Parameters
+    ----------
+    cwd : Path
+        Repository root directory.
+
+    Returns
+    -------
+    str
+        Current branch name.
+    """
     return run("rev-parse", "--abbrev-ref", "HEAD", cwd=cwd)
 
 
 def short_hash(cwd: Path) -> str:
-    """Return the 7-character short hash of HEAD."""
+    """Return the 7-character short hash of HEAD.
+
+    Parameters
+    ----------
+    cwd : Path
+        Repository root directory.
+
+    Returns
+    -------
+    str
+        Short commit hash.
+    """
     return run("rev-parse", "--short", "HEAD", cwd=cwd)
 
 
 def show_file(ref: str, rel_path: str, cwd: Path) -> str:
     """Return the content of a file at a specific git ref.
 
-    Args:
-        ref: Git ref (branch name, tag, commit hash).
-        rel_path: File path relative to the repository root.
-        cwd: Repository root.
+    Parameters
+    ----------
+    ref : str
+        Git ref (branch name, tag, or commit hash).
+    rel_path : str
+        File path relative to the repository root.
+    cwd : Path
+        Repository root directory.
 
-    Returns:
+    Returns
+    -------
+    str
         File content as a string.
 
-    Raises:
-        GitError: If the ref or path does not exist.
+    Raises
+    ------
+    GitError
+        If the ref or path does not exist.
     """
     return run("show", f"{ref}:{rel_path}", cwd=cwd)
 
 
 def branch_exists(name: str, cwd: Path) -> bool:
-    """Return True if a local branch with `name` exists."""
+    """Return True if a local branch with ``name`` exists.
+
+    Parameters
+    ----------
+    name : str
+        Branch name to check.
+    cwd : Path
+        Repository root directory.
+
+    Returns
+    -------
+    bool
+        True if the branch exists locally.
+    """
     result = subprocess.run(
         ["git", "-C", str(cwd), "rev-parse", "--verify", name],
         check=False,
@@ -73,12 +124,16 @@ def branch_exists(name: str, cwd: Path) -> bool:
 
 
 def detect_main_branch(cwd: Path) -> str:
-    """Return 'main' if it exists, otherwise 'master'.
+    """Return ``'main'`` if it exists, otherwise ``'master'``.
 
-    Args:
-        cwd: Repository root.
+    Parameters
+    ----------
+    cwd : Path
+        Repository root directory.
 
-    Returns:
+    Returns
+    -------
+    str
         Name of the primary branch.
     """
     return "main" if branch_exists("main", cwd) else "master"

@@ -40,8 +40,8 @@ class QualityGuard(BaseModel):
 class OutputPatterns(BaseModel):
     """Regex patterns to extract metric values from experiment stdout.
 
-    Each pattern must contain exactly one capture group ``(...)`` matching
-    the numeric value.
+    Each pattern must contain exactly one capture group ``(...)`` that
+    matches the numeric value.
     """
 
     primary: str = Field(description="Regex pattern with one capture group for the primary metric")
@@ -52,6 +52,11 @@ class OutputPatterns(BaseModel):
 
         Strips the capture group so the agent can use it directly in grep
         to confirm a metric appeared in the log.
+
+        Returns
+        -------
+        str
+            Literal prefix suitable for use in ``grep "..."  run.log``.
         """
         prefix = re.split(r"[\(\[\\\+\*\?]", self.primary.lstrip("^"))[0]
         return prefix.rstrip("\\s").rstrip()
@@ -113,22 +118,35 @@ class HelixConfig(BaseModel):
     def load(cls, path: Path) -> HelixConfig:
         """Load and validate a helix.yaml file.
 
-        Args:
-            path: Absolute path to a ``helix.yaml`` file.
+        Parameters
+        ----------
+        path : Path
+            Absolute path to a ``helix.yaml`` file.
 
-        Returns:
-            Validated ``HelixConfig`` object.
+        Returns
+        -------
+        HelixConfig
+            Validated configuration object.
 
-        Raises:
-            FileNotFoundError: If the path does not exist.
-            pydantic.ValidationError: If the YAML content does not match the schema.
+        Raises
+        ------
+        FileNotFoundError
+            If the path does not exist.
+        pydantic.ValidationError
+            If the YAML content does not match the schema.
         """
         with path.open() as fh:
             data = yaml.safe_load(fh)
         return cls.model_validate(data)
 
     def interesting_keywords(self) -> set[str]:
-        """Return keywords worth surfacing when filtering agent log output."""
+        """Return keywords worth surfacing when filtering agent log output.
+
+        Returns
+        -------
+        set[str]
+            Set of lowercase keywords (metric names plus standard status words).
+        """
         base: set[str] = {
             "keep",
             "discard",

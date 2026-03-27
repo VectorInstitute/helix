@@ -31,10 +31,14 @@ class MetricParser:
     def parse(self, output: str) -> ExperimentResult | None:
         """Parse experiment stdout and return an ``ExperimentResult``.
 
-        Args:
-            output: Full stdout from the experiment command.
+        Parameters
+        ----------
+        output : str
+            Full stdout from the experiment command.
 
-        Returns:
+        Returns
+        -------
+        ExperimentResult or None
             Parsed result, or ``None`` if the primary metric was not found
             (indicating a crash or incomplete run).
         """
@@ -55,13 +59,19 @@ class MetricParser:
 def is_improvement(result: ExperimentResult, baseline: ExperimentResult | None, config: HelixConfig) -> bool:
     """Return True if ``result`` beats ``baseline`` without violating the quality guard.
 
-    Args:
-        result: Metrics from the current experiment.
-        baseline: Best known metrics so far (None if no baseline exists yet).
-        config: Helix configuration (optimize direction, quality guard tolerance).
+    Parameters
+    ----------
+    result : ExperimentResult
+        Metrics from the current experiment.
+    baseline : ExperimentResult or None
+        Best known metrics so far. If ``None``, any result is an improvement.
+    config : HelixConfig
+        Helix configuration (optimize direction, quality guard tolerance).
 
-    Returns:
-        True if the result is an improvement and the quality guard is satisfied.
+    Returns
+    -------
+    bool
+        True if the result improves the primary metric and the quality guard is satisfied.
     """
     if baseline is None:
         return True

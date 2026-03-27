@@ -11,8 +11,8 @@ from rich.console import Console
 from rich.table import Table
 
 from .config import HelixConfig
-from .results import read_main_stats, read_results
 from .git import detect_main_branch
+from .results import read_main_stats, read_results
 from .runner import HelixRunner, find_helix_root
 
 
@@ -25,13 +25,25 @@ def _today_tag() -> str:
 
 
 def cmd_run(args: argparse.Namespace) -> None:
-    """Start (or resume) an autonomous research session."""
+    """Start (or resume) an autonomous research session.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed CLI arguments (``tag``, ``max_turns``, ``helix_root``).
+    """
     root = Path(args.helix_root) if args.helix_root else find_helix_root()
     HelixRunner(helix_root=root, tag=args.tag, max_turns=args.max_turns).run()
 
 
 def cmd_status(args: argparse.Namespace) -> None:
-    """Print current best results and recent experiments from this helix."""
+    """Print current best results and recent experiments from this helix.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed CLI arguments (``helix_root``).
+    """
     root = Path(args.helix_root) if args.helix_root else find_helix_root()
     config = HelixConfig.load(root / "helix.yaml")
     main_branch = detect_main_branch(root)
@@ -49,7 +61,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     if results_path.exists():
         rows = read_results(results_path)
         if rows:
-            console.print(f"\n[dim]results.tsv ({len(rows)} experiments this session)[/dim]")
+            console.print(f"\n[dim]results.tsv — {len(rows)} experiments this session[/dim]")
             t = Table(show_header=True, header_style="dim")
             t.add_column("commit", style="dim", width=9)
             t.add_column(primary_name)
@@ -60,10 +72,9 @@ def cmd_status(args: argparse.Namespace) -> None:
             for r in rows[-20:]:
                 status = r.get("status", "")
                 color = {"keep": "green", "discard": "yellow", "crash": "red"}.get(status, "")
-                qg_val = r.get(config.metrics.quality_guard.name, "") if config.metrics.quality_guard else None
                 row_data = [r.get("commit", ""), r.get(primary_name, "")]
-                if qg_val is not None:
-                    row_data.append(qg_val)
+                if config.metrics.quality_guard:
+                    row_data.append(r.get(config.metrics.quality_guard.name, ""))
                 row_data += [f"[{color}]{status}[/{color}]" if color else status, r.get("description", "")]
                 t.add_row(*row_data)
             console.print(t)

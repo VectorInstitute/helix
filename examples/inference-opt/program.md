@@ -28,11 +28,11 @@ Each experiment runs for a **fixed time budget of 5 minutes** (wall clock, exclu
 
 ## Metrics
 
-**Primary — `tokens_per_sec` (maximize):**
+**Primary: `tokens_per_sec` (maximize)**
 
 WikiText-2 tokens scored per wall-clock second within the 5-minute budget. Pure throughput.
 
-**Quality guard — `bpb` (must not degrade):**
+**Quality guard: `bpb` (must not degrade)**
 
 Bits per byte. Measures whether the inference produces correct log-probabilities. If `bpb` rises
 meaningfully from baseline, the experiment is producing wrong scores and must be discarded.
@@ -65,11 +65,11 @@ commit	tokens_per_sec	bpb	status	description
 
 Columns:
 
-1. `commit` — 7-char git short hash
-2. `tokens_per_sec` — e.g. `1240.5`
-3. `bpb` — e.g. `0.9753`
-4. `status` — `keep`, `discard`, or `crash`
-5. `description` — brief description of the technique tried
+1. `commit`: 7-char git short hash
+2. `tokens_per_sec`: e.g. `1240.5`
+3. `bpb`: e.g. `0.9753`
+4. `status`: `keep`, `discard`, or `crash`
+5. `description`: brief description of the technique tried
 
 Example:
 
@@ -92,8 +92,8 @@ LOOP FOREVER:
 5. Extract results: `grep "tokens_per_sec:\|bpb:" run.log`
 6. If results are empty, the run crashed. Check `tail -n 50 run.log`. Fix if trivial; otherwise log as crash and move on.
 7. Append a row to `results.tsv`.
-8. If `tokens_per_sec` improved AND `bpb` did not degrade: **keep** — the commit stays.
-9. Otherwise: **discard** — `git reset --hard HEAD~1`.
+8. If `tokens_per_sec` improved AND `bpb` did not degrade: **keep** (the commit stays).
+9. Otherwise: **discard** (`git reset --hard HEAD~1`).
 
 **Timeout:** If a run exceeds 10 minutes total, kill it (`kill $(cat run.pid)`) and treat as crash.
 
