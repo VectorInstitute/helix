@@ -1,11 +1,11 @@
 # helix
 
-**Autonomous research loops. Reproducible, shareable, verifiable.**
+Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch), helix generalizes
+the idea of autonomous AI research loops beyond LLM training. Give an agent a codebase, a metric,
+and a fixed time budget. It experiments overnight. You wake up to results.
 
-A *helix* is a self-contained research workflow where an AI agent iteratively
-experiments on a codebase, keeps improvements, and discards failures. The git
-history is the research trail. `experiments.tsv` is the reproducibility proof.
-Anyone can clone a helix, run it, and independently verify every claimed result.
+The git history is the research trail. `experiments.tsv` is the proof. Anyone can clone a helix,
+run it on their hardware, and independently verify every result.
 
 ## Concepts
 
@@ -102,20 +102,3 @@ metrics:
 | `HELIX_TIME_BUDGET` | `300` | Seconds per experiment (inference-opt) |
 | `HELIX_CHUNK_TOKENS` | `512` | Tokens per WikiText-2 chunk (inference-opt) |
 
-## Project structure
-
-```
-helix/
-├── src/helix/
-│   ├── config.py      # Pydantic schema for helix.yaml
-│   ├── runner.py      # Session orchestrator
-│   ├── agent.py       # AgentBackend protocol + ClaudeBackend
-│   ├── git.py         # Git helpers
-│   ├── results.py     # experiments.tsv / results.tsv I/O
-│   ├── display.py     # Rich UI panels
-│   ├── init.py        # helix init scaffolding
-│   ├── templates.py   # Built-in helix templates
-│   └── cli.py         # helix init / run / status
-└── examples/
-    └── inference-opt/ # Reference helix: LLM inference throughput
-```
