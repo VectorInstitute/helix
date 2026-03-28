@@ -92,6 +92,16 @@ class ScopeConfig(BaseModel):
     )
 
 
+class AgentConfig(BaseModel):
+    """Agent configuration."""
+
+    model: str = Field(
+        default="claude-opus-4-6",
+        description="Model ID passed to the agent SDK (e.g. 'claude-opus-4-6', 'claude-sonnet-4-6')",
+    )
+    max_turns: int = Field(default=200, gt=0, description="Maximum agent turns per session")
+
+
 class RequirementsConfig(BaseModel):
     """Runtime requirements (informational, shown in startup panel)."""
 
@@ -112,6 +122,7 @@ class HelixConfig(BaseModel):
     author: str | None = None
     scope: ScopeConfig
     metrics: MetricsConfig
+    agent: AgentConfig = Field(default_factory=AgentConfig)
     requirements: RequirementsConfig = Field(default_factory=RequirementsConfig)
 
     @classmethod

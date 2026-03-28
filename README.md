@@ -2,7 +2,7 @@
 
 **Autonomous research loops. Reproducible, shareable, verifiable.**
 
-A *helix* is a self-contained research workflow where a Claude agent iteratively
+A *helix* is a self-contained research workflow where an AI agent iteratively
 experiments on a codebase, keeps improvements, and discards failures. The git
 history is the research trail. `experiments.tsv` is the reproducibility proof.
 Anyone can clone a helix, run it, and independently verify every claimed result.

@@ -59,21 +59,6 @@ def current_branch(cwd: Path) -> str:
     return run("rev-parse", "--abbrev-ref", "HEAD", cwd=cwd)
 
 
-def short_hash(cwd: Path) -> str:
-    """Return the 7-character short hash of HEAD.
-
-    Parameters
-    ----------
-    cwd : Path
-        Repository root directory.
-
-    Returns
-    -------
-    str
-        Short commit hash.
-    """
-    return run("rev-parse", "--short", "HEAD", cwd=cwd)
-
 
 def show_file(ref: str, rel_path: str, cwd: Path) -> str:
     """Return the content of a file at a specific git ref.

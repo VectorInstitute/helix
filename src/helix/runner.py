@@ -1,4 +1,4 @@
-"""Research session runner — orchestrates the Claude agent loop for any helix."""
+"""Research session runner — orchestrates the agent loop for any helix."""
 
 from __future__ import annotations
 
@@ -14,19 +14,10 @@ from pathlib import Path
 from types import FrameType
 
 import anyio
-from claude_agent_sdk import (
-    AssistantMessage,
-    ClaudeAgentOptions,
-    CLIConnectionError,
-    CLINotFoundError,
-    ResultMessage,
-    SystemMessage,
-    TextBlock,
-    query,
-)
 from rich.console import Console
 from rich.rule import Rule
 
+from .agent import AgentBackend, ClaudeBackend, SessionFinished, SessionStarted, TextOutput
 from .config import HelixConfig, OptimizeDirection
 from .display import session_summary_panel, startup_panel
 from .git import GitError, current_branch, detect_main_branch, run as git, show_file
@@ -67,16 +58,26 @@ class HelixRunner:
     A session:
 
     1. Creates (or resumes) a ``helix/<tag>`` branch.
-    2. Runs the Claude Opus agent, which reads ``program.md`` and experiments in a loop.
+    2. Runs the agent, which reads ``program.md`` and experiments in a loop.
     3. After the agent finishes (or is interrupted), merges improvements to the main branch.
+
+    The agent backend defaults to ``ClaudeBackend`` but any object satisfying the
+    ``AgentBackend`` protocol can be passed in.
     """
 
-    def __init__(self, helix_root: Path, tag: str, max_turns: int) -> None:
+    def __init__(
+        self,
+        helix_root: Path,
+        tag: str,
+        max_turns: int,
+        backend: AgentBackend | None = None,
+    ) -> None:
         self.root = helix_root
         self.config = HelixConfig.load(helix_root / "helix.yaml")
         self.tag = tag
         self.branch = f"helix/{tag}"
         self.max_turns = max_turns
+        self.backend: AgentBackend = backend or ClaudeBackend()
         self._main_branch = detect_main_branch(helix_root)
         self._log_path = helix_root / "run.log"
         self._pid_path = helix_root / "run.pid"
@@ -130,7 +131,7 @@ class HelixRunner:
         Returns
         -------
         str
-            Full prompt string passed to the Claude agent.
+            Full prompt string passed to the agent.
         """
         cfg = self.config
         baseline = main_stats.get("baseline")
@@ -192,6 +193,13 @@ Read `program.md` for full domain-specific instructions. Operational rules:
 Read `program.md` first, then scope files, then run the unmodified baseline.
 NEVER stop or ask for confirmation. Run until interrupted."""
 
+    def _system_prompt(self) -> str:
+        return (
+            f"You are an expert researcher autonomously investigating: {self.config.description}. "
+            "Be methodical and scientific. Write clean, minimal code. "
+            "Never ask for permission or confirmation — act autonomously."
+        )
+
     async def _monitor_log(self) -> None:
         """Stream run.log to the console, handling file truncation between runs."""
         pos = 0
@@ -223,7 +231,7 @@ NEVER stop or ask for confirmation. Run until interrupted."""
             await asyncio.sleep(0.15)
 
     async def _run_agent(self, main_stats: dict[str, float | None]) -> None:
-        """Launch the Claude Opus agent and stream filtered output until done.
+        """Run the agent backend and stream filtered output until done.
 
         Parameters
         ----------
@@ -232,6 +240,7 @@ NEVER stop or ask for confirmation. Run until interrupted."""
         """
         prompt = self._build_prompt(main_stats)
         keywords = self.config.interesting_keywords()
+        model = self.config.agent.model
 
         console.print(startup_panel(self.tag, self.max_turns, main_stats, self.config))
 
@@ -240,41 +249,30 @@ NEVER stop or ask for confirmation. Run until interrupted."""
 
         monitor_task = asyncio.create_task(self._monitor_log())
 
-        options = ClaudeAgentOptions(
-            cwd=str(self.root),
-            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-            permission_mode="bypassPermissions",
-            max_turns=self.max_turns,
-            model="claude-opus-4-6",
-            system_prompt=(
-                f"You are an expert researcher autonomously investigating: {self.config.description}. "
-                "Be methodical and scientific. Write clean, minimal code. "
-                "Never ask for permission or confirmation — act autonomously."
-            ),
-            setting_sources=[],
-        )
-
         try:
-            async for message in query(prompt=prompt, options=options):
-                if isinstance(message, SystemMessage) and message.subtype == "init":
-                    sid = message.data.get("session_id", "")
-                    console.print(f"[dim]session: {sid}[/dim]\n")
+            stream = await self.backend.run(
+                prompt=prompt,
+                system_prompt=self._system_prompt(),
+                cwd=self.root,
+                model=model,
+                max_turns=self.max_turns,
+            )
+            async for event in stream:
+                if isinstance(event, SessionStarted):
+                    console.print(f"[dim]session: {event.session_id}[/dim]\n")
 
-                elif isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        if not isinstance(block, TextBlock):
-                            continue
-                        lines = block.text.splitlines()
-                        interesting = [ln for ln in lines if any(kw in ln.lower() for kw in keywords)]
-                        if interesting:
-                            ts = datetime.now().strftime("%H:%M:%S")
-                            for ln in interesting:
-                                console.print(f"[dim]{ts}[/dim]  {ln}")
+                elif isinstance(event, TextOutput):
+                    lines = event.text.splitlines()
+                    interesting = [ln for ln in lines if any(kw in ln.lower() for kw in keywords)]
+                    if interesting:
+                        ts = datetime.now().strftime("%H:%M:%S")
+                        for ln in interesting:
+                            console.print(f"[dim]{ts}[/dim]  {ln}")
 
-                elif isinstance(message, ResultMessage):
-                    status = "error" if message.is_error else "ok"
-                    cost = f"  cost: ${message.total_cost_usd:.4f}" if message.total_cost_usd else ""
-                    console.print(f"\n[dim]agent finished — turns: {message.num_turns}  status: {status}{cost}[/dim]")
+                elif isinstance(event, SessionFinished):
+                    status = "error" if event.error else "ok"
+                    cost = f"  cost: ${event.cost_usd:.4f}" if event.cost_usd else ""
+                    console.print(f"\n[dim]agent finished — turns: {event.turns}  status: {status}{cost}[/dim]")
         finally:
             monitor_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -352,7 +350,7 @@ NEVER stop or ask for confirmation. Run until interrupted."""
         self._commit_to_main(rows)
 
     def run(self) -> None:
-        """Run a complete research session: preflight → agent → post-session commit."""
+        """Run a complete research session: preflight, agent, post-session commit."""
         atexit.register(self._kill_experiment)
         signal.signal(signal.SIGTERM, self._sigterm_handler)
 
@@ -363,12 +361,6 @@ NEVER stop or ask for confirmation. Run until interrupted."""
 
         try:
             anyio.run(self._run_agent, main_stats)
-        except CLINotFoundError:
-            console.print("[red]✗[/red] Claude Code CLI not found. Run: pip install claude-agent-sdk")
-            sys.exit(1)
-        except CLIConnectionError as exc:
-            console.print(f"[red]✗[/red] Connection error: {exc}")
-            sys.exit(1)
         except KeyboardInterrupt:
             console.print("\n[yellow]⚠[/yellow] Interrupted.")
             self._kill_experiment()
