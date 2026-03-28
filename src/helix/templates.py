@@ -81,6 +81,32 @@ LOOP FOREVER:
 **NEVER STOP.** Run until interrupted.
 """
 
+_GENERIC_README_MD = """\
+# {{name}}
+
+{{description}}
+
+## Quickstart
+
+```bash
+pip install helices
+git init
+helix run
+```
+
+## Metric
+
+**Primary: `score` (maximize).** Higher is better.
+
+## Scope
+
+The agent may only modify `solver.py`. All other files are read-only.
+
+---
+
+Built with [helix](https://github.com/VectorInstitute/helix).
+"""
+
 _GENERIC_SOLVER_PY = """\
 \"\"\"Solver — modify this file freely.\"\"\"
 
@@ -152,6 +178,34 @@ requirements:
   gpu: "GPU recommended"
 """
 
+_AI_INFERENCE_README_MD = """\
+# {{name}}
+
+{{description}}
+
+## Quickstart
+
+```bash
+pip install helices
+uv run prepare.py   # one-time: download model + dataset
+helix run
+```
+
+## Metrics
+
+**Primary: `tokens_per_sec` (maximize)** — WikiText-2 tokens scored per wall-clock second.
+
+**Quality guard: `bpb` (must not degrade)** — Bits per byte, must stay within 1% of baseline.
+
+## Scope
+
+The agent may only modify `infer.py`. All other files are read-only.
+
+---
+
+Built with [helix](https://github.com/VectorInstitute/helix).
+"""
+
 _AI_INFERENCE_PROGRAM_MD = """\
 # {{name}}
 
@@ -221,12 +275,14 @@ LOOP FOREVER:
 #: Map from template name to {filename: content} dict.
 TEMPLATES: dict[str, dict[str, str]] = {
     "generic": {
+        "README.md": _GENERIC_README_MD,
         "helix.yaml": _GENERIC_HELIX_YAML,
         "program.md": _GENERIC_PROGRAM_MD,
         "solver.py": _GENERIC_SOLVER_PY,
         "evaluate.py": _GENERIC_EVALUATE_PY,
     },
     "ai-inference": {
+        "README.md": _AI_INFERENCE_README_MD,
         "helix.yaml": _AI_INFERENCE_HELIX_YAML,
         "program.md": _AI_INFERENCE_PROGRAM_MD,
     },

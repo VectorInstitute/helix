@@ -62,6 +62,7 @@ class TestScaffold:
 
     def test_generic_template_creates_all_files(self, tmp_path: Path) -> None:
         target = scaffold("myhelix", tmp_path)
+        assert (target / "README.md").exists()
         assert (target / "helix.yaml").exists()
         assert (target / "program.md").exists()
         assert (target / "solver.py").exists()
@@ -70,6 +71,7 @@ class TestScaffold:
 
     def test_ai_inference_template_creates_files(self, tmp_path: Path) -> None:
         target = scaffold("myinfer", tmp_path, template="ai-inference")
+        assert (target / "README.md").exists()
         assert (target / "helix.yaml").exists()
         assert (target / "program.md").exists()
         assert (target / "experiments.tsv").exists()
@@ -140,3 +142,41 @@ class TestScaffold:
         target = scaffold("proj", tmp_path, domain="Robotics")
         config = HelixConfig.load(target / "helix.yaml")
         assert config.domain == "Robotics"
+
+    def test_readme_name_substituted(self, tmp_path: Path) -> None:
+        target = scaffold("myproject", tmp_path)
+        content = (target / "README.md").read_text()
+        assert "myproject" in content
+        assert "{{name}}" not in content
+
+    def test_readme_description_substituted(self, tmp_path: Path) -> None:
+        desc = "Solve the travelling salesman problem faster."
+        target = scaffold("tsp", tmp_path, description=desc)
+        content = (target / "README.md").read_text()
+        assert desc in content
+        assert "{{description}}" not in content
+
+    def test_readme_no_unrendered_placeholders(self, tmp_path: Path) -> None:
+        target = scaffold("proj", tmp_path, domain="Robotics", description="Optimize grasping.")
+        content = (target / "README.md").read_text()
+        assert "{{" not in content
+
+    def test_readme_links_to_helix_framework(self, tmp_path: Path) -> None:
+        target = scaffold("proj", tmp_path)
+        content = (target / "README.md").read_text()
+        assert "github.com/VectorInstitute/helix" in content
+
+    def test_ai_inference_readme_mentions_primary_metric(self, tmp_path: Path) -> None:
+        target = scaffold("myinfer", tmp_path, template="ai-inference")
+        content = (target / "README.md").read_text()
+        assert "tokens_per_sec" in content
+
+    def test_ai_inference_readme_mentions_quality_guard(self, tmp_path: Path) -> None:
+        target = scaffold("myinfer", tmp_path, template="ai-inference")
+        content = (target / "README.md").read_text()
+        assert "bpb" in content
+
+    def test_ai_inference_readme_no_unrendered_placeholders(self, tmp_path: Path) -> None:
+        target = scaffold("myinfer", tmp_path, template="ai-inference", description="Fast inference.")
+        content = (target / "README.md").read_text()
+        assert "{{" not in content
