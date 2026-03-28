@@ -50,19 +50,22 @@ helix status           # show current best and recent experiments
 | `generic` | Blank slate: `solver.py` + `evaluate.py`. Print `score: <value>` at the end. |
 | `ai-inference` | LLM inference throughput on WikiText-2. Metrics: `tokens_per_sec` + `bpb`. |
 
-## Reference helix
+## Examples
 
-`examples/inference-opt/` is a complete working helix that optimizes inference
-throughput for a causal language model on WikiText-2.
+[helix-examples](https://github.com/VectorInstitute/helix-examples) is a curated gallery of
+standalone helices, each in its own repo and included as a git submodule.
 
 ```bash
-cd examples/inference-opt
+git clone --recurse-submodules git@github.com:VectorInstitute/helix-examples.git
+cd helix-examples/inference-opt
 uv run prepare.py   # one-time: download model + dataset
 helix run
 ```
 
-The agent modifies `infer.py` (batching, quantization, `torch.compile`, etc.) and
-automatically merges improvements back to the main branch.
+The first example, [helix-inference-opt](https://github.com/VectorInstitute/helix-inference-opt),
+optimizes inference throughput for a causal language model on WikiText-2. The agent modifies
+`infer.py` (batching, quantization, `torch.compile`, etc.) and automatically merges improvements
+back to main.
 
 ## Writing your own helix
 
