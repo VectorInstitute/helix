@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -53,6 +54,34 @@ class TestAgentBackendProtocol:
             pass
 
         assert not isinstance(NotABackend(), AgentBackend)
+
+
+class TestClaudeBackendImportError:
+    @pytest.mark.asyncio
+    async def test_helpful_error_when_sdk_not_installed(self, tmp_path: Path) -> None:
+        with patch.dict(sys.modules, {"claude_agent_sdk": None}):
+            backend = ClaudeBackend()
+            with pytest.raises(ImportError, match="pip install 'helices\\[claude\\]'"):
+                await backend.run(
+                    prompt="test",
+                    system_prompt="sys",
+                    cwd=tmp_path,
+                    model="claude-opus-4-6",
+                    max_turns=10,
+                )
+
+    @pytest.mark.asyncio
+    async def test_error_mentions_claude_code(self, tmp_path: Path) -> None:
+        with patch.dict(sys.modules, {"claude_agent_sdk": None}):
+            backend = ClaudeBackend()
+            with pytest.raises(ImportError, match="Claude Code CLI"):
+                await backend.run(
+                    prompt="test",
+                    system_prompt="sys",
+                    cwd=tmp_path,
+                    model="claude-opus-4-6",
+                    max_turns=10,
+                )
 
 
 class TestClaudeBackend:

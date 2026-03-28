@@ -116,14 +116,22 @@ class ClaudeBackend:
         AgentEvent
             Normalised events from the claude-agent-sdk stream.
         """
-        from claude_agent_sdk import (  # noqa: PLC0415
-            AssistantMessage,
-            ClaudeAgentOptions,
-            ResultMessage,
-            SystemMessage,
-            TextBlock,
-            query,
-        )
+        try:
+            from claude_agent_sdk import (  # noqa: PLC0415
+                AssistantMessage,
+                ClaudeAgentOptions,
+                ResultMessage,
+                SystemMessage,
+                TextBlock,
+                query,
+            )
+        except ImportError as exc:
+            raise ImportError(
+                "claude-agent-sdk is not installed. "
+                "Install it with: pip install 'helices[claude]'\n"
+                "Note: Claude Code CLI must also be installed on your system. "
+                "See https://claude.ai/download"
+            ) from exc
 
         options = ClaudeAgentOptions(
             cwd=str(cwd),

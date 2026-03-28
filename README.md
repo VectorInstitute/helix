@@ -27,6 +27,15 @@ run it on their hardware, and independently verify every result.
 
 ## Quick start
 
+helix is agent-agnostic. The default backend uses [Claude Code](https://claude.ai/download) — install
+it on your system, then:
+
+```bash
+pip install 'helices[claude]'
+```
+
+Want to bring your own agent? Install the base package and implement the `AgentBackend` protocol:
+
 ```bash
 pip install helices
 ```
