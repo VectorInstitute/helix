@@ -20,7 +20,7 @@ Anyone can clone a helix, run it, and independently verify every claimed result.
 ## Quick start
 
 ```bash
-pip install helix
+pip install helices
 
 # from within a helix directory (one that has helix.yaml)
 helix run              # start a session tagged with today's date

@@ -1,5 +1,5 @@
 [project]
-name = "helix"
+name = "helices"
 version = "0.1.0"
 description = "Framework for reproducible autonomous research loops"
 readme = "README.md"
