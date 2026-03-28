@@ -39,3 +39,4 @@ results.tsv
 .idea/
 *.swp
 *.swo
+coverage.xml
