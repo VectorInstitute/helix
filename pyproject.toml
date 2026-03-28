@@ -7,11 +7,13 @@ requires-python = ">=3.11"
 license = { file = "LICENSE" }
 dependencies = [
     "anyio>=4.13.0",
-    "claude-agent-sdk>=0.1.51",
     "pydantic>=2.12.5",
     "pyyaml>=6.0.3",
     "rich>=14.3.3",
 ]
+
+[project.optional-dependencies]
+claude = ["claude-agent-sdk>=0.1.51"]
 
 [project.scripts]
 helix = "helix.cli:main"
@@ -25,6 +27,7 @@ packages = ["src/helix"]
 
 [dependency-groups]
 dev = [
+    "claude-agent-sdk>=0.1.51",
     "mypy>=1.19.1",
     "pre-commit>=4.2.0",
     "pytest>=8.3.5",
