@@ -95,11 +95,3 @@ metrics:
       primary: '^accuracy:\s+([\d.]+)'
 ```
 
-## Environment variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `HELIX_MODEL` | `Qwen/Qwen2.5-0.5B-Instruct` | HuggingFace model ID (inference-opt) |
-| `HELIX_HARDWARE` | `unknown` | Hardware description shown in the startup panel |
-| `HELIX_TIME_BUDGET` | `300` | Seconds per experiment (inference-opt) |
-| `HELIX_CHUNK_TOKENS` | `512` | Tokens per WikiText-2 chunk (inference-opt) |
