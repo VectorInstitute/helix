@@ -1,0 +1,58 @@
+name: unit tests
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - .pre-commit-config.yaml
+      - .github/workflows/unit_tests.yml
+      - .github/workflows/code_checks.yml
+      - '**.py'
+      - uv.lock
+      - pyproject.toml
+  pull_request:
+    branches:
+      - master
+    paths:
+      - .pre-commit-config.yaml
+      - .github/workflows/unit_tests.yml
+      - .github/workflows/code_checks.yml
+      - '**.py'
+      - uv.lock
+      - pyproject.toml
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7.2.0
+        with:
+          version: "0.9.11"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      - name: Run unit tests
+        run: |
+          uv run pytest --cov src/helix --cov-report=xml tests
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: VectorInstitute/helix
+          fail_ci_if_error: false
+          verbose: true

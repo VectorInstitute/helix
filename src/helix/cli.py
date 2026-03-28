@@ -1,4 +1,4 @@
-"""CLI entrypoints: ``helix run`` and ``helix status``."""
+"""CLI entrypoints: ``helix init``, ``helix run``, and ``helix status``."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from rich.table import Table
 
 from .config import HelixConfig
 from .git import detect_main_branch
+from .init import list_templates, scaffold
 from .results import read_main_stats, read_results
 from .runner import HelixRunner, find_helix_root
 
@@ -22,6 +23,37 @@ console = Console()
 def _today_tag() -> str:
     """Return today's date as a short lowercase tag, e.g. ``"mar27"``."""
     return datetime.now().strftime("%b%d").lower()
+
+
+def cmd_init(args: argparse.Namespace) -> None:
+    """Scaffold a new helix directory from a template.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed CLI arguments (``name``, ``template``, ``domain``, ``description``, ``output_dir``).
+    """
+    output_dir = Path(args.output_dir) if args.output_dir else Path.cwd()
+    try:
+        target = scaffold(
+            name=args.name,
+            output_dir=output_dir,
+            template=args.template,
+            domain=args.domain,
+            description=args.description,
+        )
+    except ValueError as exc:
+        console.print(f"[red]✗[/red] {exc}")
+        sys.exit(1)
+    except FileExistsError as exc:
+        console.print(f"[red]✗[/red] {exc}")
+        sys.exit(1)
+
+    console.print(f"[green]✓[/green] Created [bold]{target}[/bold]")
+    console.print(f"  template : {args.template}")
+    console.print(f"  domain   : {args.domain}")
+    console.print()
+    console.print(f"  [dim]cd {target.name} && git init && helix run[/dim]")
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -37,7 +69,7 @@ def cmd_run(args: argparse.Namespace) -> None:
 
 
 def cmd_status(args: argparse.Namespace) -> None:
-    """Print current best results and recent experiments from this helix.
+    """Print current best results and recent experiments.
 
     Parameters
     ----------
@@ -83,11 +115,29 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 def _build_parser() -> argparse.ArgumentParser:
     today = _today_tag()
+    templates = ", ".join(f"'{t}'" for t in list_templates())
+
     parser = argparse.ArgumentParser(
         prog="helix",
         description="Helix — autonomous research loop runner",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init_p = subparsers.add_parser("init", help="Scaffold a new helix from a template")
+    init_p.add_argument("name", help="Name of the new helix (also used as the directory name)")
+    init_p.add_argument(
+        "--template",
+        default="generic",
+        help=f"Template to use: {templates} (default: 'generic')",
+    )
+    init_p.add_argument("--domain", default="General", help="Research domain (default: 'General')")
+    init_p.add_argument(
+        "--description",
+        default="Autonomous research loop.",
+        help="One-line description of what this helix optimizes",
+    )
+    init_p.add_argument("--output-dir", default=None, help="Directory to create the helix in (default: current dir)")
+    init_p.set_defaults(func=cmd_init)
 
     run_p = subparsers.add_parser("run", help="Start an autonomous research session")
     run_p.add_argument(

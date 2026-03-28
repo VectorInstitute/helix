@@ -21,12 +21,32 @@ Anyone can clone a helix, run it, and independently verify every claimed result.
 
 ```bash
 pip install helices
+```
 
+### Start from a template
+
+```bash
+helix init my-project --template generic --domain "AI/ML" --description "Optimize X for task Y."
+cd my-project
+git init
+helix run
+```
+
+### Run an existing helix
+
+```bash
 # from within a helix directory (one that has helix.yaml)
 helix run              # start a session tagged with today's date
 helix run --tag exp1   # custom tag
 helix status           # show current best and recent experiments
 ```
+
+## Templates
+
+| Template | Description |
+|---|---|
+| `generic` | Blank slate: `solver.py` + `evaluate.py`. Print `score: <value>` at the end. |
+| `ai-inference` | LLM inference throughput on WikiText-2. Metrics: `tokens_per_sec` + `bpb`. |
 
 ## Reference helix
 
@@ -88,12 +108,14 @@ metrics:
 helix/
 ├── src/helix/
 │   ├── config.py      # Pydantic schema for helix.yaml
-│   ├── runner.py      # Session orchestrator (generalizes agent.py)
-│   ├── evaluate.py    # Metric extraction via regex patterns
+│   ├── runner.py      # Session orchestrator
+│   ├── agent.py       # AgentBackend protocol + ClaudeBackend
 │   ├── git.py         # Git helpers
 │   ├── results.py     # experiments.tsv / results.tsv I/O
 │   ├── display.py     # Rich UI panels
-│   └── cli.py         # helix run / helix status
+│   ├── init.py        # helix init scaffolding
+│   ├── templates.py   # Built-in helix templates
+│   └── cli.py         # helix init / run / status
 └── examples/
     └── inference-opt/ # Reference helix: LLM inference throughput
 ```
