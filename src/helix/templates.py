@@ -75,8 +75,9 @@ LOOP FOREVER:
 5. Extract results: `grep "score:" run.log`
 6. If results are empty: run crashed. Check `tail -n 50 run.log`. Fix if trivial, otherwise log as crash and move on.
 7. Append a row to `results.tsv` (tab-separated, columns: commit score status description).
-8. If `score` improved: **keep** (the commit stays).
-9. Otherwise: **discard** (`git reset --hard HEAD~1`).
+   - `status` must be exactly `keep`, `discard`, or `crash` — no other values.
+8. If `score` improved: **keep** (commit stays). Status = `keep`.
+9. Otherwise: **discard** (`git reset --hard HEAD~1`). Status = `discard`.
 
 **NEVER STOP.** Run until interrupted.
 """
@@ -265,9 +266,10 @@ LOOP FOREVER:
 4. Run: `uv run infer.py > run.log 2>&1 & echo $! > run.pid; wait $!; rm -f run.pid`
 5. Extract results: `grep "tokens_per_sec:\\|bpb:" run.log`
 6. If results are empty: crashed. Check `tail -n 50 run.log`. Fix or move on.
-7. Append a row to `results.tsv`.
-8. If `tokens_per_sec` improved AND `bpb` did not degrade: **keep** (the commit stays).
-9. Otherwise: **discard** (`git reset --hard HEAD~1`).
+7. Append a row to `results.tsv` (tab-separated).
+   - `status` must be exactly `keep`, `discard`, or `crash` — no other values.
+8. If `tokens_per_sec` improved AND `bpb` did not degrade: **keep** (commit stays). Status = `keep`.
+9. Otherwise: **discard** (`git reset --hard HEAD~1`). Status = `discard`.
 
 **NEVER STOP.** Run until interrupted.
 """

@@ -181,7 +181,10 @@ Read `program.md` for full domain-specific instructions. Operational rules:
 - Run each experiment: `{eval_cmd} > run.log 2>&1 & echo $! > run.pid; wait $!; rm -f run.pid`
 - Check results: `grep "{grep_hint}" run.log`
 - Log to `results.tsv` (tab-separated, header: {results_cols}).
-- Kept experiments: git commit stays. Discarded: `git reset --hard HEAD~1`.
+  - `status` MUST be exactly one of: `keep`, `discard`, `crash`. No other values.
+  - Use `keep` if the experiment improved the metric and the commit stays.
+  - Use `discard` if the result was worse (`git reset --hard HEAD~1` to undo).
+  - Use `crash` if the run failed or produced no output.
 - Do NOT commit results.tsv — leave it untracked.
 
 ## Primary metric: {primary_name} ({primary_dir} is better)
@@ -303,7 +306,7 @@ NEVER stop or ask for confirmation. Run until interrupted."""
 
         original_branch = current_branch(self.root)
         try:
-            git("checkout", self._main_branch, cwd=self.root)
+            git("checkout", "--force", self._main_branch, cwd=self.root)
             append_experiments(self.tag, rows, self._experiments_path, self.config)
             files_to_add = ["experiments.tsv"]
 
