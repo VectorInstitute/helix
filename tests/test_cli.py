@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from helix.cli import _build_parser, _today_tag, cmd_init, cmd_status, main
+from helix.cli import _build_parser, _today_tag, cmd_init, cmd_run, cmd_status, main
 
 
 class TestTodayTag:
@@ -80,18 +80,14 @@ class TestCmdInit:
 
     def test_value_error_exits_1(self) -> None:
         with patch("helix.cli.scaffold", side_effect=ValueError("Unknown template")):
-            args = argparse.Namespace(
-                name="x", template="bad", domain="G", description="D", output_dir=None
-            )
+            args = argparse.Namespace(name="x", template="bad", domain="G", description="D", output_dir=None)
             with pytest.raises(SystemExit) as exc_info:
                 cmd_init(args)
             assert exc_info.value.code == 1
 
     def test_file_exists_error_exits_1(self) -> None:
         with patch("helix.cli.scaffold", side_effect=FileExistsError("already exists")):
-            args = argparse.Namespace(
-                name="x", template="generic", domain="G", description="D", output_dir=None
-            )
+            args = argparse.Namespace(name="x", template="generic", domain="G", description="D", output_dir=None)
             with pytest.raises(SystemExit) as exc_info:
                 cmd_init(args)
             assert exc_info.value.code == 1
@@ -103,12 +99,8 @@ class TestCmdInit:
             captured["output_dir"] = output_dir
             return output_dir / name
 
-        with patch("helix.cli.scaffold", side_effect=fake_scaffold), patch(
-            "helix.cli.Path.cwd", return_value=tmp_path
-        ):
-            args = argparse.Namespace(
-                name="p", template="generic", domain="G", description="D", output_dir=None
-            )
+        with patch("helix.cli.scaffold", side_effect=fake_scaffold), patch("helix.cli.Path.cwd", return_value=tmp_path):
+            args = argparse.Namespace(name="p", template="generic", domain="G", description="D", output_dir=None)
             cmd_init(args)
         assert captured["output_dir"] == tmp_path
 
@@ -121,8 +113,6 @@ class TestCmdRun:
             patch("helix.cli.HelixRunner", return_value=mock_runner),
         ):
             args = argparse.Namespace(tag="mar27", max_turns=50, helix_root=None)
-            from helix.cli import cmd_run
-
             cmd_run(args)
         mock_runner.run.assert_called_once()
 
@@ -130,8 +120,6 @@ class TestCmdRun:
         mock_runner = MagicMock()
         with patch("helix.cli.HelixRunner", return_value=mock_runner):
             args = argparse.Namespace(tag="t", max_turns=10, helix_root=str(tmp_path))
-            from helix.cli import cmd_run
-
             cmd_run(args)
         call_kwargs = mock_runner.run.call_args
         assert call_kwargs is not None

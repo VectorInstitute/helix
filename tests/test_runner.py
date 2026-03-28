@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import signal
 from pathlib import Path
@@ -11,6 +12,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
+from helix.agent import ClaudeBackend, SessionFinished, SessionStarted, TextOutput
+from helix.git import GitError
 from helix.runner import HelixRunner, find_helix_root
 
 
@@ -85,8 +88,6 @@ class TestHelixRunnerInit:
 
     def test_default_backend_is_claude(self, tmp_path: Path) -> None:
         _make_helix_yaml(tmp_path)
-        from helix.agent import ClaudeBackend
-
         with patch("helix.runner.detect_main_branch", return_value="main"):
             runner = HelixRunner(helix_root=tmp_path, tag="t", max_turns=10)
         assert isinstance(runner.backend, ClaudeBackend)
@@ -215,8 +216,6 @@ class TestPreflight:
             assert exc_info.value.code == 1
 
     def test_branch_already_exists_exits_1(self, tmp_path: Path) -> None:
-        from helix.git import GitError
-
         runner = _make_runner(tmp_path)
         with (
             patch("helix.runner.current_branch", return_value="main"),
@@ -276,8 +275,6 @@ def _mock_config() -> MagicMock:
 class TestRunAgentAsync:
     @pytest.mark.asyncio
     async def test_yields_session_events(self, tmp_path: Path) -> None:
-        from helix.agent import SessionFinished, SessionStarted
-
         runner = _make_runner(tmp_path)
         runner.config = _mock_config()
 
@@ -295,8 +292,6 @@ class TestRunAgentAsync:
 
     @pytest.mark.asyncio
     async def test_interesting_text_printed(self, tmp_path: Path) -> None:
-        from helix.agent import SessionFinished, TextOutput
-
         runner = _make_runner(tmp_path)
         runner.config = _mock_config()
 
@@ -345,8 +340,6 @@ class TestHelixRunnerRun:
 class TestMonitorLog:
     @pytest.mark.asyncio
     async def test_cancelled_cleanly(self, tmp_path: Path) -> None:
-        import asyncio
-
         runner = _make_runner(tmp_path)
         task = asyncio.create_task(runner._monitor_log())
         await asyncio.sleep(0)  # allow task to start
@@ -356,8 +349,6 @@ class TestMonitorLog:
 
     @pytest.mark.asyncio
     async def test_reads_log_file_when_present(self, tmp_path: Path) -> None:
-        import asyncio
-
         runner = _make_runner(tmp_path)
         runner._log_path.write_bytes(b"Starting evaluation\nsome output\n")
 
@@ -405,8 +396,6 @@ class TestCommitToMain:
             runner._commit_to_main(rows)
 
     def test_show_file_error_is_silenced(self, tmp_path: Path) -> None:
-        from helix.git import GitError
-
         runner = _make_runner(tmp_path)
         rows = [{"commit": "abc", "score": "200.0", "status": "keep", "description": "batch"}]
 
