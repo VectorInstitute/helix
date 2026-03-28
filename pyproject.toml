@@ -29,6 +29,7 @@ dev = [
     "pre-commit>=4.2.0",
     "pytest>=8.3.5",
     "pytest-asyncio>=0.25.3",
+    "pytest-cov>=6.0.0",
     "ruff>=0.15.8",
     "types-pyyaml>=6.0.12",
 ]
@@ -60,6 +61,10 @@ warn_unused_ignores = true
 implicit_reexport = false
 strict_equality = true
 extra_checks = true
+
+[tool.coverage.run]
+source = ["src/helix"]
+omit = ["tests/*", "*__init__.py"]
 
 [tool.ruff]
 include = ["*.py", "pyproject.toml"]
