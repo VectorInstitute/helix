@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from typing import AsyncIterator
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from helix.agent import AgentBackend, ClaudeBackend, SessionFinished, SessionStarted, TextOutput
+from helix.agent import AgentBackend, ClaudeBackend, GeminiBackend, SessionFinished, SessionStarted, TextOutput
 
 
 class TestAgentEvents:
@@ -125,3 +126,119 @@ class TestClaudeBackend:
         assert events[0].session_id == "sid-999"
         assert isinstance(events[1], SessionFinished)
         assert events[1].turns == 10
+
+
+class TestGeminiBackendProtocol:
+    def test_gemini_backend_satisfies_protocol(self) -> None:
+        assert isinstance(GeminiBackend(), AgentBackend)
+
+
+class TestGeminiBackendMissingCLI:
+    @pytest.mark.asyncio
+    async def test_raises_when_gemini_not_on_path(self, tmp_path: Path) -> None:
+        with patch("helix.agent.shutil.which", return_value=None):
+            backend = GeminiBackend()
+            with pytest.raises(FileNotFoundError, match="npm install -g @google/gemini-cli"):
+                await backend.run(
+                    prompt="test",
+                    system_prompt="",
+                    cwd=tmp_path,
+                    model="gemini-2.5-pro",
+                    max_turns=10,
+                )
+
+
+def _make_gemini_proc(*lines: bytes) -> MagicMock:
+    """Build a mock subprocess whose stdout async-iterates over ``lines``."""
+
+    async def _aiter() -> AsyncIterator[bytes]:
+        for line in lines:
+            yield line
+
+    mock_proc = MagicMock()
+    mock_proc.stdout = _aiter()
+    mock_proc.wait = AsyncMock()
+    return mock_proc
+
+
+class TestGeminiBackend:
+    @pytest.mark.asyncio
+    async def test_yields_events_from_stream_json(self, tmp_path: Path) -> None:
+        mock_proc = _make_gemini_proc(
+            b'{"type":"init","session_id":"gem-123","model":"gemini-2.5-pro"}\n',
+            b'{"type":"message","role":"assistant","content":"Hello world","delta":true}\n',
+            b'{"type":"result","status":"success","stats":{"tool_calls":3}}\n',
+        )
+
+        with (
+            patch("helix.agent.shutil.which", return_value="/usr/bin/gemini"),
+            patch("helix.agent.asyncio.create_subprocess_exec", return_value=mock_proc),
+        ):
+            backend = GeminiBackend()
+            stream = await backend.run(
+                prompt="test",
+                system_prompt="be helpful",
+                cwd=tmp_path,
+                model="gemini-2.5-pro",
+                max_turns=10,
+            )
+            events = [e async for e in stream]
+
+        assert isinstance(events[0], SessionStarted)
+        assert events[0].session_id == "gem-123"
+        assert isinstance(events[1], TextOutput)
+        assert events[1].text == "Hello world"
+        assert isinstance(events[2], SessionFinished)
+        assert events[2].turns == 3
+        assert events[2].cost_usd is None
+        assert events[2].error is False
+
+    @pytest.mark.asyncio
+    async def test_error_status_sets_error_flag(self, tmp_path: Path) -> None:
+        mock_proc = _make_gemini_proc(
+            b'{"type":"init","session_id":"gem-err","model":"gemini-2.5-pro"}\n',
+            b'{"type":"result","status":"error","stats":{"tool_calls":0}}\n',
+        )
+
+        with (
+            patch("helix.agent.shutil.which", return_value="/usr/bin/gemini"),
+            patch("helix.agent.asyncio.create_subprocess_exec", return_value=mock_proc),
+        ):
+            backend = GeminiBackend()
+            stream = await backend.run(
+                prompt="test",
+                system_prompt="",
+                cwd=tmp_path,
+                model="gemini-2.5-pro",
+                max_turns=10,
+            )
+            events = [e async for e in stream]
+
+        finished = next(e for e in events if isinstance(e, SessionFinished))
+        assert finished.error is True
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_prepended_to_prompt(self, tmp_path: Path) -> None:
+        captured_cmd: list[str] = []
+
+        async def fake_subprocess(*args: str, **kwargs: object) -> MagicMock:
+            captured_cmd.extend(args)
+            return _make_gemini_proc()
+
+        with (
+            patch("helix.agent.shutil.which", return_value="/usr/bin/gemini"),
+            patch("helix.agent.asyncio.create_subprocess_exec", side_effect=fake_subprocess),
+        ):
+            backend = GeminiBackend()
+            stream = await backend.run(
+                prompt="do the thing",
+                system_prompt="be concise",
+                cwd=tmp_path,
+                model="gemini-2.5-pro",
+                max_turns=10,
+            )
+            [e async for e in stream]
+
+        prompt_idx = captured_cmd.index("--prompt") + 1
+        assert "be concise" in captured_cmd[prompt_idx]
+        assert "do the thing" in captured_cmd[prompt_idx]

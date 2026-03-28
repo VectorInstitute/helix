@@ -4,6 +4,16 @@ Defines the ``AgentBackend`` protocol so helix is not tied to any specific
 agent SDK. The default backend uses ``claude-agent-sdk``, but any implementation
 that satisfies ``AgentBackend`` can be dropped in.
 
+Built-in backends
+-----------------
+``ClaudeBackend``
+    Spawns Claude Code as a subprocess via ``claude-agent-sdk``.
+    Requires: ``pip install 'helices[claude]'`` and Claude Code CLI.
+
+``GeminiBackend``
+    Spawns Gemini CLI as a subprocess, parsing its ``stream-json`` output.
+    Requires: ``npm install -g @google/gemini-cli`` (no extra Python package).
+
 To use a custom backend, pass it to ``HelixRunner``::
 
     runner = HelixRunner(root, tag, max_turns, backend=MyBackend())
@@ -11,6 +21,9 @@ To use a custom backend, pass it to ``HelixRunner``::
 
 from __future__ import annotations
 
+import asyncio
+import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import AsyncIterator, Protocol, runtime_checkable
@@ -159,5 +172,127 @@ class ClaudeBackend:
                         cost_usd=message.total_cost_usd,
                         error=message.is_error,
                     )
+
+        return _stream()
+
+
+class GeminiBackend:
+    """Backend powered by the Gemini CLI (``@google/gemini-cli``).
+
+    Spawns ``gemini`` as a subprocess in headless mode with ``--output-format
+    stream-json``, then parses its newline-delimited JSON messages into the
+    normalised ``AgentEvent`` stream.
+
+    Requirements
+    ------------
+    Install the Gemini CLI via npm::
+
+        npm install -g @google/gemini-cli
+
+    No additional Python package is required. The CLI must be authenticated
+    (run ``gemini`` interactively once, or set ``GEMINI_API_KEY``).
+
+    Notes
+    -----
+    ``system_prompt`` is prepended to ``prompt`` as Gemini CLI has no
+    dedicated system-prompt flag. ``max_turns`` is not directly enforced by
+    the CLI; the session runs until the model stops producing tool calls.
+    ``cost_usd`` is always ``None`` as the CLI does not report cost.
+    """
+
+    async def run(
+        self,
+        prompt: str,
+        system_prompt: str,
+        cwd: Path,
+        model: str,
+        max_turns: int,
+    ) -> AsyncIterator[AgentEvent]:
+        """Run a Gemini CLI session and yield normalised events.
+
+        Parameters
+        ----------
+        prompt : str
+            Initial user prompt.
+        system_prompt : str
+            System-level instructions (prepended to the prompt).
+        cwd : Path
+            Working directory (helix root).
+        model : str
+            Gemini model ID (e.g. ``"gemini-2.5-pro"``).
+        max_turns : int
+            Passed for interface compatibility; not enforced by the CLI.
+
+        Yields
+        ------
+        AgentEvent
+            Normalised events parsed from the gemini stream-json output.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the ``gemini`` CLI binary is not found on ``PATH``.
+        """
+        if shutil.which("gemini") is None:
+            raise FileNotFoundError(
+                "gemini CLI not found. "
+                "Install it with: npm install -g @google/gemini-cli\n"
+                "Then authenticate by running `gemini` interactively once, "
+                "or set the GEMINI_API_KEY environment variable."
+            )
+
+        full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+
+        cmd = [
+            "gemini",
+            "--prompt",
+            full_prompt,
+            "--yolo",
+            "--output-format",
+            "stream-json",
+            "--model",
+            model,
+        ]
+
+        async def _stream() -> AsyncIterator[AgentEvent]:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                cwd=cwd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+
+            assert proc.stdout is not None
+            tool_calls = 0
+
+            async for raw_line in proc.stdout:
+                line = raw_line.decode().strip()
+                if not line:
+                    continue
+                try:
+                    msg = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                msg_type = msg.get("type")
+
+                if msg_type == "init":
+                    yield SessionStarted(session_id=msg.get("session_id", ""))
+
+                elif msg_type == "message" and msg.get("role") == "assistant":
+                    content = msg.get("content", "")
+                    if content:
+                        yield TextOutput(text=content)
+
+                elif msg_type == "result":
+                    stats = msg.get("stats", {})
+                    tool_calls = stats.get("tool_calls", 0)
+                    yield SessionFinished(
+                        turns=tool_calls,
+                        cost_usd=None,
+                        error=msg.get("status") != "success",
+                    )
+
+            await proc.wait()
 
         return _stream()
