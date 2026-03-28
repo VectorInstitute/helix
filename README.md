@@ -103,4 +103,3 @@ metrics:
 | `HELIX_HARDWARE` | `unknown` | Hardware description shown in the startup panel |
 | `HELIX_TIME_BUDGET` | `300` | Seconds per experiment (inference-opt) |
 | `HELIX_CHUNK_TOKENS` | `512` | Tokens per WikiText-2 chunk (inference-opt) |
-

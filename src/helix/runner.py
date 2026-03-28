@@ -20,7 +20,8 @@ from rich.rule import Rule
 from .agent import AgentBackend, ClaudeBackend, SessionFinished, SessionStarted, TextOutput
 from .config import HelixConfig, OptimizeDirection
 from .display import session_summary_panel, startup_panel
-from .git import GitError, current_branch, detect_main_branch, run as git, show_file
+from .git import GitError, current_branch, detect_main_branch, show_file
+from .git import run as git
 from .results import append_experiments, best_kept, read_main_stats, read_results
 
 

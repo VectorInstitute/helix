@@ -32,7 +32,7 @@ class TestAgentEvents:
 
     def test_events_are_frozen(self) -> None:
         event = SessionStarted(session_id="x")
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             event.session_id = "y"  # type: ignore[misc]
 
 
@@ -58,7 +58,6 @@ class TestAgentBackendProtocol:
 class TestClaudeBackend:
     @pytest.mark.asyncio
     async def test_yields_session_started(self, tmp_path: Path) -> None:
-        from unittest.mock import AsyncMock
 
         mock_system = MagicMock()
         mock_system.subtype = "init"
@@ -70,7 +69,6 @@ class TestClaudeBackend:
         mock_result.is_error = False
 
         async def fake_query(**kwargs):  # type: ignore[no-untyped-def]
-            from claude_agent_sdk import AssistantMessage, ResultMessage, SystemMessage
             yield mock_system
             yield mock_result
 

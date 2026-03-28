@@ -12,11 +12,10 @@ Usage:
 
 import torch
 import torch.nn.functional as F  # noqa: N812
+from prepare import evaluate
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-
-from prepare import evaluate
 
 
 console = Console()
@@ -34,7 +33,8 @@ def infer(model, _tokenizer, chunks: list[list[int]]) -> list[float]:  # type: i
         tokenizer: The tokenizer (for reference; not needed for pure logit scoring).
         chunks: List of token ID lists, each of length CHUNK_TOKENS.
 
-    Returns:
+    Returns
+    -------
         List of floats — the sum of log-probs (nats) for each chunk.
     """
     results = []

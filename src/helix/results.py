@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import subprocess
 from pathlib import Path
 
@@ -173,10 +174,8 @@ def read_main_stats(main_branch: str, cwd: Path, config: HelixConfig) -> dict[st
     for r in kept:
         val = r.get(primary_col)
         if val:
-            try:
+            with contextlib.suppress(ValueError):
                 values.append(float(val))
-            except ValueError:
-                pass
 
     if not values:
         return {"baseline": None, "best": None}

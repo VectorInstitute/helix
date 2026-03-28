@@ -71,10 +71,7 @@ def scaffold(
         If a directory named *name* already exists inside *output_dir*.
     """
     if template not in AVAILABLE:
-        raise ValueError(
-            f"Unknown template '{template}'. "
-            f"Available templates: {', '.join(sorted(AVAILABLE))}"
-        )
+        raise ValueError(f"Unknown template '{template}'. Available templates: {', '.join(sorted(AVAILABLE))}")
 
     target = output_dir / name
     if target.exists():

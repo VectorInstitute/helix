@@ -63,11 +63,12 @@ def load_model_and_tokenizer():  # type: ignore[no-untyped-def]
 def load_chunks(tokenizer) -> list[dict]:  # type: ignore[no-untyped-def]
     """Load WikiText-2 test set and split into fixed-size token chunks.
 
-    Returns:
+    Returns
+    -------
         List of dicts with keys ``ids`` (list[int]) and ``utf8_bytes`` (int).
     """
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test", cache_dir=CACHE_DIR)
-    full_text = "\n\n".join(row["text"] for row in dataset if row["text"].strip())  # type: ignore[index]
+    full_text = "\n\n".join(row["text"] for row in dataset if row["text"].strip())
     all_ids = tokenizer.encode(full_text, add_special_tokens=False)
 
     chunks = []
@@ -95,7 +96,8 @@ def evaluate(infer_fn, batch_size: int = 1) -> dict:  # type: ignore[no-untyped-
         infer_fn: Callable conforming to the signature above.
         batch_size: Number of chunks per ``infer_fn`` call.
 
-    Returns:
+    Returns
+    -------
         Dict with keys ``tokens_per_sec``, ``bpb``, ``chunks_processed``, ``time_elapsed``.
     """
     model, tokenizer = load_model_and_tokenizer()

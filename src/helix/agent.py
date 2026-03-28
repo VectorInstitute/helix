@@ -116,7 +116,7 @@ class ClaudeBackend:
         AgentEvent
             Normalised events from the claude-agent-sdk stream.
         """
-        from claude_agent_sdk import (
+        from claude_agent_sdk import (  # noqa: PLC0415
             AssistantMessage,
             ClaudeAgentOptions,
             ResultMessage,

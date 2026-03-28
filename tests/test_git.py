@@ -14,7 +14,9 @@ from helix.git import GitError, branch_exists, current_branch, detect_main_branc
 def repo(tmp_path: Path) -> Path:
     """Return a path to a fresh git repo with one commit on 'main'."""
     subprocess.run(["git", "init", "-b", "main", str(tmp_path)], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(tmp_path), "config", "user.email", "test@test.com"], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "config", "user.email", "test@test.com"], check=True, capture_output=True
+    )
     subprocess.run(["git", "-C", str(tmp_path), "config", "user.name", "Test"], check=True, capture_output=True)
     (tmp_path / "readme.txt").write_text("hello")
     subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True, capture_output=True)

@@ -59,7 +59,6 @@ def current_branch(cwd: Path) -> str:
     return run("rev-parse", "--abbrev-ref", "HEAD", cwd=cwd)
 
 
-
 def show_file(ref: str, rel_path: str, cwd: Path) -> str:
     """Return the content of a file at a specific git ref.
 

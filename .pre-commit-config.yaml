@@ -40,10 +40,10 @@ repos:
         entry: python3 -m mypy --config-file pyproject.toml
         language: system
         types: [python]
-        exclude: "tests"
+        exclude: "tests|examples"
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1
+    rev: v1.32.0
     hooks:
       - id: typos
 

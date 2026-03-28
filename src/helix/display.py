@@ -139,6 +139,7 @@ def _fmt_metric(name: str):  # type: ignore[no-untyped-def]
     callable
         Function from ``float | None`` to a Rich-markup string.
     """
+
     def fmt(value: float | None) -> str:
         if value is None:
             return "[dim]—[/dim]"

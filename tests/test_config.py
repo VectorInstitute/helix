@@ -102,7 +102,7 @@ class TestHelixConfigLoad:
         path = tmp_path / "helix.yaml"
         path.write_text(yaml.dump(data))
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             HelixConfig.load(path)
 
     def test_scope_editable_and_readonly(self, tmp_path: Path) -> None:

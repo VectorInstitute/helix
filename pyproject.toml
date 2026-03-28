@@ -30,6 +30,7 @@ dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=0.25.3",
     "ruff>=0.15.8",
+    "types-pyyaml>=6.0.12",
 ]
 
 [tool.uv]
@@ -103,6 +104,9 @@ ignore = [
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
