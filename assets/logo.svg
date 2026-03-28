@@ -1,0 +1,104 @@
+<svg width="800" height="180" viewBox="0 0 800 180" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#0f0a1e"/>
+    </linearGradient>
+    <radialGradient id="glowbg" cx="165" cy="90" r="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="s1g" x1="30" y1="0" x2="300" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="50%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="s2g" x1="30" y1="0" x2="300" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="50%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="tg" x1="345" y1="0" x2="620" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softglow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      @keyframes flow1 { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -22; } }
+      @keyframes flow2 { from { stroke-dashoffset: -11; } to { stroke-dashoffset: -33; } }
+      .s1 { animation: flow1 1.5s linear infinite; }
+      .s2 { animation: flow2 1.5s linear infinite; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="180" rx="16" fill="url(#bg)"/>
+  <rect width="800" height="180" rx="16" fill="url(#glowbg)"/>
+
+  <!--
+    Helix geometry:
+      center_y = 90, half-period = 90px, crossings at x = 30, 120, 210, 300
+      peak y = 40  → control-point y = 23   (solved: 0.25·90 + 0.75·cp = 40)
+      trough y = 140 → control-point y = 157  (solved: 0.25·90 + 0.75·cp = 140)
+      peaks/troughs at x = 75, 165, 255  (midpoints of each half-period)
+  -->
+
+  <!-- Strand 2 — back, dimmer, opposite phase -->
+  <path class="s2"
+        d="M30,90 C57,157 93,157 120,90 C147,23 183,23 210,90 C237,157 273,157 300,90"
+        stroke="url(#s2g)" stroke-width="2.5" fill="none" stroke-linecap="round"
+        stroke-dasharray="8 14" opacity="0.65" filter="url(#softglow)"/>
+
+  <!-- Rungs at peaks/troughs -->
+  <line x1="75"  y1="40"  x2="75"  y2="140" stroke="#1a3a4a" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="165" y1="40"  x2="165" y2="140" stroke="#2a1a4a" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="255" y1="40"  x2="255" y2="140" stroke="#1a3a4a" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Strand 1 — front, bright, glowing -->
+  <path class="s1"
+        d="M30,90 C57,23 93,23 120,90 C147,157 183,157 210,90 C237,23 273,23 300,90"
+        stroke="url(#s1g)" stroke-width="3" fill="none" stroke-linecap="round"
+        stroke-dasharray="8 14" filter="url(#glow)"/>
+
+  <!-- Strand 1 peak dots — teal, top -->
+  <circle cx="75"  cy="40"  r="5.5" fill="#22d3ee" filter="url(#glow)">
+    <animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="255" cy="40"  r="5.5" fill="#22d3ee" filter="url(#glow)">
+    <animate attributeName="opacity" values="1;0.35;1" dur="2s" begin="0.4s" repeatCount="indefinite"/>
+  </circle>
+  <!-- Strand 1 trough dot — purple, bottom -->
+  <circle cx="165" cy="140" r="5.5" fill="#a78bfa" filter="url(#glow)">
+    <animate attributeName="opacity" values="0.35;1;0.35" dur="2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Strand 2 dots — dimmer, behind -->
+  <circle cx="75"  cy="140" r="4"   fill="#818cf8" opacity="0.55"/>
+  <circle cx="165" cy="40"  r="4"   fill="#38bdf8" opacity="0.55"/>
+  <circle cx="255" cy="140" r="4"   fill="#818cf8" opacity="0.55"/>
+
+  <!-- "helix" wordmark -->
+  <text x="345" y="118"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="84" font-weight="800" letter-spacing="-4"
+        fill="url(#tg)">helix</text>
+
+  <!-- Tagline -->
+  <text x="350" y="148"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="13" font-weight="500" letter-spacing="3.5"
+        fill="#475569">autonomous research loops</text>
+</svg>

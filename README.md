@@ -1,4 +1,6 @@
-# helix
+<p align="center">
+  <img src="assets/logo.svg" alt="helix" width="700"/>
+</p>
 
 Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch), helix generalizes
 the idea of autonomous AI research loops beyond LLM training. Give an agent a codebase, a metric,
