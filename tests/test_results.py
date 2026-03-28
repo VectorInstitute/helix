@@ -208,3 +208,61 @@ class TestReadMainStats:
         stats = read_main_stats("main", git_repo, cfg)
         assert stats["baseline"] == pytest.approx(0.9)
         assert stats["best"] == pytest.approx(0.3)
+
+    def test_no_kept_rows_returns_none(self, tmp_path: Path, git_repo: Path) -> None:
+        cfg = _make_config(tmp_path)
+        content = "session\tcommit\tscore\tloss\tstatus\tdescription\ns1\ta\t100.0\t0.5\tdiscard\tfailed\n"
+        self._commit_experiments(git_repo, content)
+
+        stats = read_main_stats("main", git_repo, cfg)
+        assert stats == {"baseline": None, "best": None}
+
+
+class TestParseTsvStringEdgeCases:
+    def test_single_line_returns_empty(self, tmp_path: Path) -> None:
+        cfg = _make_config(tmp_path)
+        subprocess.run(["git", "init", "-b", "main", str(tmp_path)], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(tmp_path), "config", "user.email", "t@t.com"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(tmp_path), "config", "user.name", "T"], check=True, capture_output=True)
+        (tmp_path / "experiments.tsv").write_text("just-one-line")
+        subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(tmp_path), "commit", "-m", "add"], check=True, capture_output=True)
+        stats = read_main_stats("main", tmp_path, cfg)
+        assert stats == {"baseline": None, "best": None}
+
+    def test_blank_data_lines_skipped(self, tmp_path: Path) -> None:
+        cfg = _make_config(tmp_path)
+        subprocess.run(["git", "init", "-b", "main", str(tmp_path)], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(tmp_path), "config", "user.email", "t@t.com"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(tmp_path), "config", "user.name", "T"], check=True, capture_output=True)
+        content = "session\tcommit\tscore\tloss\tstatus\tdescription\n\n\ns1\ta\t100.0\t0.5\tkeep\ttest\n"
+        (tmp_path / "experiments.tsv").write_text(content)
+        subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(tmp_path), "commit", "-m", "add"], check=True, capture_output=True)
+        stats = read_main_stats("main", tmp_path, cfg)
+        assert stats["baseline"] == pytest.approx(100.0)
+
+
+class TestBestKeptInvalidScore:
+    def test_invalid_score_string_treated_as_zero(self, tmp_path: Path) -> None:
+        cfg = _make_config(tmp_path, optimize="maximize")
+        rows = [
+            {"commit": "a", "score": "not-a-float", "loss": "0.5", "status": "keep", "description": "x"},
+            {"commit": "b", "score": "50.0", "loss": "0.5", "status": "keep", "description": "y"},
+        ]
+        val, desc = best_kept(rows, cfg)
+        assert val == pytest.approx(50.0)
+        assert desc == "y"
+
+
+class TestAppendExperimentsNoTrailingNewline:
+    def test_appends_even_without_trailing_newline(self, tmp_path: Path) -> None:
+        cfg = _make_config(tmp_path)
+        path = tmp_path / "experiments.tsv"
+        # Write existing content without trailing newline
+        path.write_text("session\tcommit\tscore\tloss\tstatus\tdescription\ns1\ta\t90.0\t0.5\tkeep\tfirst")
+        rows = [{"commit": "b", "score": "95.0", "loss": "0.5", "status": "keep", "description": "second"}]
+        append_experiments("s2", rows, path, cfg)
+        lines = [ln for ln in path.read_text().splitlines() if ln.strip()]
+        assert len(lines) == 3
+        assert "s2\tb" in lines[2]

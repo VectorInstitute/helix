@@ -57,6 +57,103 @@ class TestAgentBackendProtocol:
         assert not isinstance(NotABackend(), AgentBackend)
 
 
+class TestClaudeBackendStream:
+    @pytest.mark.asyncio
+    async def test_full_stream_session_started_text_finished(self, tmp_path: Path) -> None:
+        """Test ClaudeBackend._stream by injecting a real-looking mock SDK module."""
+
+        class SystemMessage:
+            def __init__(self, subtype: str, data: dict[str, str]) -> None:
+                self.subtype = subtype
+                self.data = data
+
+        class TextBlock:
+            def __init__(self, text: str) -> None:
+                self.text = text
+
+        class AssistantMessage:
+            def __init__(self, content: list[TextBlock]) -> None:
+                self.content = content
+
+        class ResultMessage:
+            def __init__(self, num_turns: int, total_cost_usd: float, is_error: bool) -> None:
+                self.num_turns = num_turns
+                self.total_cost_usd = total_cost_usd
+                self.is_error = is_error
+
+        class ClaudeAgentOptions:
+            def __init__(self, **kwargs: object) -> None:
+                pass
+
+        async def fake_query(prompt: str, options: object) -> AsyncIterator[object]:
+            yield SystemMessage("init", {"session_id": "sid-stream"})
+            yield AssistantMessage([TextBlock("thinking..."), TextBlock("")])
+            yield ResultMessage(7, 0.05, False)
+
+        mock_sdk = MagicMock()
+        mock_sdk.SystemMessage = SystemMessage
+        mock_sdk.AssistantMessage = AssistantMessage
+        mock_sdk.TextBlock = TextBlock
+        mock_sdk.ResultMessage = ResultMessage
+        mock_sdk.ClaudeAgentOptions = ClaudeAgentOptions
+        mock_sdk.query = fake_query
+
+        with patch.dict(sys.modules, {"claude_agent_sdk": mock_sdk}):
+            backend = ClaudeBackend()
+            stream = await backend.run(
+                prompt="test",
+                system_prompt="sys",
+                cwd=tmp_path,
+                model="claude-opus-4-6",
+                max_turns=10,
+            )
+            events = [e async for e in stream]
+
+        assert isinstance(events[0], SessionStarted)
+        assert events[0].session_id == "sid-stream"
+        assert isinstance(events[1], TextOutput)
+        assert events[1].text == "thinking..."
+        assert isinstance(events[2], SessionFinished)
+        assert events[2].turns == 7
+        assert events[2].cost_usd == pytest.approx(0.05)
+        assert events[2].error is False
+
+    @pytest.mark.asyncio
+    async def test_stream_skips_non_init_system_messages(self, tmp_path: Path) -> None:
+        class SystemMessage:
+            def __init__(self, subtype: str, data: dict[str, str]) -> None:
+                self.subtype = subtype
+                self.data = data
+
+        class ClaudeAgentOptions:
+            def __init__(self, **kwargs: object) -> None:
+                pass
+
+        async def fake_query(prompt: str, options: object) -> AsyncIterator[object]:
+            yield SystemMessage("other", {"session_id": "x"})
+
+        mock_sdk = MagicMock()
+        mock_sdk.SystemMessage = SystemMessage
+        mock_sdk.AssistantMessage = type("AssistantMessage", (), {})
+        mock_sdk.TextBlock = type("TextBlock", (), {})
+        mock_sdk.ResultMessage = type("ResultMessage", (), {})
+        mock_sdk.ClaudeAgentOptions = ClaudeAgentOptions
+        mock_sdk.query = fake_query
+
+        with patch.dict(sys.modules, {"claude_agent_sdk": mock_sdk}):
+            backend = ClaudeBackend()
+            stream = await backend.run(
+                prompt="test",
+                system_prompt="sys",
+                cwd=tmp_path,
+                model="claude-opus-4-6",
+                max_turns=10,
+            )
+            events = [e async for e in stream]
+
+        assert events == []
+
+
 class TestClaudeBackendImportError:
     @pytest.mark.asyncio
     async def test_helpful_error_when_sdk_not_installed(self, tmp_path: Path) -> None:
@@ -242,3 +339,38 @@ class TestGeminiBackend:
         prompt_idx = captured_cmd.index("--prompt") + 1
         assert "be concise" in captured_cmd[prompt_idx]
         assert "do the thing" in captured_cmd[prompt_idx]
+
+    @pytest.mark.asyncio
+    async def test_blank_lines_skipped(self, tmp_path: Path) -> None:
+        mock_proc = _make_gemini_proc(
+            b"\n",
+            b"   \n",
+            b'{"type":"result","status":"success","stats":{"tool_calls":0}}\n',
+        )
+        with (
+            patch("helix.agent.shutil.which", return_value="/usr/bin/gemini"),
+            patch("helix.agent.asyncio.create_subprocess_exec", return_value=mock_proc),
+        ):
+            backend = GeminiBackend()
+            stream = await backend.run("test", "", tmp_path, "gemini-2.5-pro", 10)
+            events = [e async for e in stream]
+
+        assert all(not isinstance(e, SessionStarted) for e in events)
+        assert any(isinstance(e, SessionFinished) for e in events)
+
+    @pytest.mark.asyncio
+    async def test_invalid_json_lines_skipped(self, tmp_path: Path) -> None:
+        mock_proc = _make_gemini_proc(
+            b"not valid json\n",
+            b'{"type":"result","status":"success","stats":{"tool_calls":0}}\n',
+        )
+        with (
+            patch("helix.agent.shutil.which", return_value="/usr/bin/gemini"),
+            patch("helix.agent.asyncio.create_subprocess_exec", return_value=mock_proc),
+        ):
+            backend = GeminiBackend()
+            stream = await backend.run("test", "", tmp_path, "gemini-2.5-pro", 10)
+            events = [e async for e in stream]
+
+        assert len(events) == 1
+        assert isinstance(events[0], SessionFinished)
