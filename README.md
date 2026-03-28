@@ -32,7 +32,7 @@ helix is agent-agnostic. Pick a backend or bring your own.
 | Backend | Install | Requires |
 |---|---|---|
 | `ClaudeBackend` (default) | `pip install 'helices[claude]'` | [Claude Code CLI](https://claude.ai/download) |
-| `GeminiBackend` | `pip install helices` | [Gemini CLI](https://github.com/google-gemini/gemini-cli): `npm install -g @google/gemini-cli` |
+| `GeminiBackend` | `pip install helices` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) |
 | Custom | `pip install helices` | Implement the `AgentBackend` protocol |
 
 ### Start from a template
