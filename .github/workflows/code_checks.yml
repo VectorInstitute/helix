@@ -48,10 +48,10 @@ jobs:
           source .venv/bin/activate
           pre-commit run --all-files
 
-      - name: Export requirements for pip-audit
-        run: uv export --no-dev --format requirements-txt -o requirements.txt
+      - name: Seed pip into venv
+        run: uv pip install pip
 
       - name: pip-audit
         uses: pypa/gh-action-pip-audit@v1.1.0
         with:
-          inputs: requirements.txt
+          virtual-environment: .venv/
