@@ -2,6 +2,12 @@
   <img src="assets/logo.svg" alt="helix" width="700"/>
 </p>
 
+[![code checks](https://github.com/VectorInstitute/helix/actions/workflows/code_checks.yml/badge.svg)](https://github.com/VectorInstitute/helix/actions/workflows/code_checks.yml)
+[![unit tests](https://github.com/VectorInstitute/helix/actions/workflows/unit_tests.yml/badge.svg)](https://github.com/VectorInstitute/helix/actions/workflows/unit_tests.yml)
+[![codecov](https://codecov.io/github/VectorInstitute/helix/graph/badge.svg)](https://codecov.io/github/VectorInstitute/helix)
+[![PyPI](https://img.shields.io/pypi/v/helices)](https://pypi.org/project/helices/)
+![GitHub License](https://img.shields.io/github/license/VectorInstitute/helix)
+
 Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch), helix generalizes
 the idea of autonomous AI research loops beyond LLM training. Give an agent a codebase, a metric,
 and a fixed time budget. It experiments overnight. You wake up to results.
