@@ -361,6 +361,8 @@ NEVER stop or ask for confirmation. Run until interrupted."""
 
         if "HELIX_HARDWARE" not in os.environ:
             os.environ["HELIX_HARDWARE"] = detect_hardware()
+        if "HELIX_TIME_BUDGET" not in os.environ:
+            os.environ["HELIX_TIME_BUDGET"] = str(self.config.metrics.evaluate.timeout_seconds)
 
         console.print(Rule(f"[bold cyan]helix[/bold cyan] · {self.config.name}"))
 
