@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from unittest.mock import MagicMock, patch
 
@@ -154,7 +155,6 @@ class TestRunnerHardwareEnvVar:
         """Explicit HELIX_HARDWARE always wins — detect_hardware is never called."""
         monkeypatch.setenv("HELIX_HARDWARE", "My Custom GPU")
         with patch("helix.runner.detect_hardware") as mock_detect:
-            import os
             if "HELIX_HARDWARE" not in os.environ:
                 os.environ["HELIX_HARDWARE"] = mock_detect()
             assert os.environ["HELIX_HARDWARE"] == "My Custom GPU"
@@ -163,9 +163,7 @@ class TestRunnerHardwareEnvVar:
     def test_env_var_set_when_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When env var absent, detect_hardware result is written to HELIX_HARDWARE."""
         monkeypatch.delenv("HELIX_HARDWARE", raising=False)
-        with patch("helix.runner.detect_hardware", return_value="Apple M4 Pro"):
-            import os
+        with patch("helix.runner.detect_hardware", return_value="Apple M4 Pro") as mock_detect:
             if "HELIX_HARDWARE" not in os.environ:
-                from helix.runner import detect_hardware as _dh
-                os.environ["HELIX_HARDWARE"] = _dh()
+                os.environ["HELIX_HARDWARE"] = mock_detect()
             assert os.environ["HELIX_HARDWARE"] == "Apple M4 Pro"
