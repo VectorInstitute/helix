@@ -35,10 +35,10 @@ helix is agent-agnostic. Pick a backend or bring your own.
 | `GeminiBackend` | `pip install helices` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) |
 | Custom | `pip install helices` | Implement the `AgentBackend` protocol |
 
-### Start from a template
+### Start from scratch
 
 ```bash
-helix init my-project --template generic --domain "AI/ML" --description "Optimize X for task Y."
+helix init my-project --domain "AI/ML" --description "Optimize X for task Y."
 cd my-project
 git init
 helix run
@@ -52,13 +52,6 @@ helix run              # start a session tagged with today's date
 helix run --tag exp1   # custom tag
 helix status           # show current best and recent experiments
 ```
-
-## Templates
-
-| Template | Description |
-|---|---|
-| `generic` | Blank slate: `solver.py` + `evaluate.py`. Print `score: <value>` at the end. |
-| `ai-inference` | LLM inference throughput on WikiText-2. Metrics: `tokens_per_sec` + `bpb`. |
 
 ## Examples
 
