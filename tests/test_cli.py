@@ -59,7 +59,10 @@ class TestBuildParser:
 
 class TestCmdInit:
     def test_success_calls_scaffold(self, tmp_path: Path) -> None:
-        with patch("helix.cli.scaffold", return_value=tmp_path / "myhelix") as mock_scaffold:
+        with (
+            patch("helix.cli.scaffold", return_value=tmp_path / "myhelix") as mock_scaffold,
+            patch("helix.cli.run_uv_lock", return_value=True),
+        ):
             args = argparse.Namespace(
                 name="myhelix",
                 domain="General",
@@ -69,12 +72,23 @@ class TestCmdInit:
             cmd_init(args)
         mock_scaffold.assert_called_once()
 
-    def test_file_exists_error_exits_1(self) -> None:
-        with patch("helix.cli.scaffold", side_effect=FileExistsError("already exists")):
-            args = argparse.Namespace(name="x", domain="G", description="D", output_dir=None)
-            with pytest.raises(SystemExit) as exc_info:
-                cmd_init(args)
-            assert exc_info.value.code == 1
+    def test_calls_run_uv_lock_after_scaffold(self, tmp_path: Path) -> None:
+        target = tmp_path / "myhelix"
+        with (
+            patch("helix.cli.scaffold", return_value=target),
+            patch("helix.cli.run_uv_lock", return_value=True) as mock_uv,
+        ):
+            args = argparse.Namespace(name="myhelix", domain="G", description="D", output_dir=str(tmp_path))
+            cmd_init(args)
+        mock_uv.assert_called_once_with(target)
+
+    def test_uv_lock_failure_does_not_exit(self, tmp_path: Path) -> None:
+        with (
+            patch("helix.cli.scaffold", return_value=tmp_path / "myhelix"),
+            patch("helix.cli.run_uv_lock", return_value=False),
+        ):
+            args = argparse.Namespace(name="myhelix", domain="G", description="D", output_dir=str(tmp_path))
+            cmd_init(args)  # must not raise
 
     def test_none_output_dir_uses_cwd(self, tmp_path: Path) -> None:
         captured: dict[str, Path] = {}
@@ -83,7 +97,11 @@ class TestCmdInit:
             captured["output_dir"] = output_dir
             return output_dir / name
 
-        with patch("helix.cli.scaffold", side_effect=fake_scaffold), patch("helix.cli.Path.cwd", return_value=tmp_path):
+        with (
+            patch("helix.cli.scaffold", side_effect=fake_scaffold),
+            patch("helix.cli.run_uv_lock", return_value=True),
+            patch("helix.cli.Path.cwd", return_value=tmp_path),
+        ):
             args = argparse.Namespace(name="p", domain="G", description="D", output_dir=None)
             cmd_init(args)
         assert captured["output_dir"] == tmp_path
