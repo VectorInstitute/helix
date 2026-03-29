@@ -22,6 +22,7 @@ from .config import HelixConfig, OptimizeDirection
 from .display import session_summary_panel, startup_panel
 from .git import GitError, current_branch, detect_main_branch, show_file
 from .git import run as git
+from .hardware import detect_hardware
 from .results import append_experiments, best_kept, read_main_stats, read_results
 
 
@@ -357,6 +358,9 @@ NEVER stop or ask for confirmation. Run until interrupted."""
         """Run a complete research session: preflight, agent, post-session commit."""
         atexit.register(self._kill_experiment)
         signal.signal(signal.SIGTERM, self._sigterm_handler)
+
+        if "HELIX_HARDWARE" not in os.environ:
+            os.environ["HELIX_HARDWARE"] = detect_hardware()
 
         console.print(Rule(f"[bold cyan]helix[/bold cyan] · {self.config.name}"))
 
