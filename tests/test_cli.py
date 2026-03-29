@@ -28,14 +28,6 @@ class TestBuildParser:
         args = _build_parser().parse_args(["init", "myproject"])
         assert args.name == "myproject"
 
-    def test_init_default_template(self) -> None:
-        args = _build_parser().parse_args(["init", "myproject"])
-        assert args.template == "generic"
-
-    def test_init_custom_template(self) -> None:
-        args = _build_parser().parse_args(["init", "x", "--template", "ai-inference"])
-        assert args.template == "ai-inference"
-
     def test_init_default_domain(self) -> None:
         args = _build_parser().parse_args(["init", "x"])
         assert args.domain == "General"
@@ -70,7 +62,6 @@ class TestCmdInit:
         with patch("helix.cli.scaffold", return_value=tmp_path / "myhelix") as mock_scaffold:
             args = argparse.Namespace(
                 name="myhelix",
-                template="generic",
                 domain="General",
                 description="Test.",
                 output_dir=str(tmp_path),
@@ -78,16 +69,9 @@ class TestCmdInit:
             cmd_init(args)
         mock_scaffold.assert_called_once()
 
-    def test_value_error_exits_1(self) -> None:
-        with patch("helix.cli.scaffold", side_effect=ValueError("Unknown template")):
-            args = argparse.Namespace(name="x", template="bad", domain="G", description="D", output_dir=None)
-            with pytest.raises(SystemExit) as exc_info:
-                cmd_init(args)
-            assert exc_info.value.code == 1
-
     def test_file_exists_error_exits_1(self) -> None:
         with patch("helix.cli.scaffold", side_effect=FileExistsError("already exists")):
-            args = argparse.Namespace(name="x", template="generic", domain="G", description="D", output_dir=None)
+            args = argparse.Namespace(name="x", domain="G", description="D", output_dir=None)
             with pytest.raises(SystemExit) as exc_info:
                 cmd_init(args)
             assert exc_info.value.code == 1
@@ -100,7 +84,7 @@ class TestCmdInit:
             return output_dir / name
 
         with patch("helix.cli.scaffold", side_effect=fake_scaffold), patch("helix.cli.Path.cwd", return_value=tmp_path):
-            args = argparse.Namespace(name="p", template="generic", domain="G", description="D", output_dir=None)
+            args = argparse.Namespace(name="p", domain="G", description="D", output_dir=None)
             cmd_init(args)
         assert captured["output_dir"] == tmp_path
 
