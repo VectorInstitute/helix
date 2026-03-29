@@ -68,7 +68,9 @@ def scaffold(
     target = output_dir / name
     target.mkdir(parents=True, exist_ok=True)
 
-    substitutions = {"name": name, "domain": domain, "description": description}
+    # When name is ".", derive the project name from the resolved directory.
+    resolved_name = target.resolve().name if name == "." else name
+    substitutions = {"name": resolved_name, "domain": domain, "description": description}
     for filename, content in TEMPLATE.items():
         dest = target / filename
         if dest.exists():
