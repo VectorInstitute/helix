@@ -33,7 +33,7 @@
       <stop offset="50%"  stop-color="#8A25C9"/>
       <stop offset="100%" stop-color="#EB088A"/>
     </linearGradient>
-    <linearGradient id="tg" x1="345" y1="0" x2="630" y2="0" gradientUnits="userSpaceOnUse">
+    <linearGradient id="tg" x1="345" y1="0" x2="580" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%"   stop-color="#EB088A"/>
       <stop offset="100%" stop-color="#313CFF"/>
     </linearGradient>
@@ -56,6 +56,7 @@
     </filter>
 
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;800&amp;display=swap');
       @keyframes flow1 { from { stroke-dashoffset: 0;   } to { stroke-dashoffset: -22; } }
       @keyframes flow2 { from { stroke-dashoffset: -11; } to { stroke-dashoffset: -33; } }
       .s1 { animation: flow1 1.5s linear infinite; }
@@ -63,8 +64,7 @@
     </style>
   </defs>
 
-  <!-- Background -->
-  <rect width="800" height="180" rx="16" fill="url(#bg)"/>
+  <!-- Ambient glow -->
   <rect width="800" height="180" rx="16" fill="url(#glowbg)"/>
 
   <!--
@@ -112,13 +112,13 @@
 
   <!-- "helix" wordmark — Vector magenta→cobalt gradient -->
   <text x="345" y="118"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
         font-size="84" font-weight="800" letter-spacing="-4"
         fill="url(#tg)">helix</text>
 
   <!-- Tagline -->
-  <text x="350" y="148"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+  <text x="345" y="148"
+        font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
         font-size="13" font-weight="500" letter-spacing="3.5"
         fill="#4a4a6a">autonomous research loops</text>
 </svg>
