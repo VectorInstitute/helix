@@ -1,4 +1,4 @@
-"""Scaffold a new helix from a built-in template.
+"""Scaffold a new helix from the built-in template.
 
 The public entry point is ``scaffold()``. The CLI calls it via ``helix init``.
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .config import HelixConfig
 from .results import _tsv_header
-from .templates import AVAILABLE, TEMPLATES
+from .templates import TEMPLATE
 
 
 def _render(content: str, substitutions: dict[str, str]) -> str:
@@ -36,11 +36,10 @@ def _render(content: str, substitutions: dict[str, str]) -> str:
 def scaffold(
     name: str,
     output_dir: Path,
-    template: str = "generic",
     domain: str = "General",
     description: str = "Autonomous research loop.",
 ) -> Path:
-    """Create a new helix directory from a built-in template.
+    """Create a new helix directory from the built-in template.
 
     Parameters
     ----------
@@ -48,9 +47,6 @@ def scaffold(
         Helix name — used as the directory name and filled into ``helix.yaml``.
     output_dir : Path
         Parent directory where the new helix directory will be created.
-    template : str, optional
-        Template to use. One of the values in ``templates.AVAILABLE``.
-        Defaults to ``"generic"``.
     domain : str, optional
         Research domain written into ``helix.yaml`` (e.g. ``"AI/ML"``).
         Defaults to ``"General"``.
@@ -65,14 +61,9 @@ def scaffold(
 
     Raises
     ------
-    ValueError
-        If *template* is not recognised.
     FileExistsError
         If a directory named *name* already exists inside *output_dir*.
     """
-    if template not in AVAILABLE:
-        raise ValueError(f"Unknown template '{template}'. Available templates: {', '.join(sorted(AVAILABLE))}")
-
     target = output_dir / name
     if target.exists():
         raise FileExistsError(f"Directory already exists: {target}")
@@ -80,7 +71,7 @@ def scaffold(
     target.mkdir(parents=True)
 
     substitutions = {"name": name, "domain": domain, "description": description}
-    for filename, content in TEMPLATES[template].items():
+    for filename, content in TEMPLATE.items():
         (target / filename).write_text(_render(content, substitutions))
 
     # Write experiments.tsv with the correct header derived from the rendered helix.yaml.
@@ -88,14 +79,3 @@ def scaffold(
     (target / "experiments.tsv").write_text(_tsv_header(config, include_session=True) + "\n")
 
     return target
-
-
-def list_templates() -> list[str]:
-    """Return a sorted list of available template names.
-
-    Returns
-    -------
-    list[str]
-        Sorted list of template names.
-    """
-    return sorted(AVAILABLE)

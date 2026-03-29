@@ -1,15 +1,13 @@
-"""Built-in helix templates for ``helix init``.
+"""Built-in helix template for ``helix init``.
 
-Each template is a dict mapping filename to content string.
+The template is a dict mapping filename to content string.
 Placeholders use ``{{key}}`` syntax and are filled by ``init.scaffold()``.
 """
 
 from __future__ import annotations
 
 
-AVAILABLE: frozenset[str] = frozenset({"generic", "ai-inference"})
-
-_GENERIC_HELIX_YAML = """\
+_HELIX_YAML = """\
 name: {{name}}
 version: 1.0.0
 domain: {{domain}}
@@ -39,7 +37,7 @@ requirements:
   python: ">=3.11"
 """
 
-_GENERIC_PROGRAM_MD = """\
+_PROGRAM_MD = """\
 # {{name}}
 
 {{description}}
@@ -82,7 +80,7 @@ LOOP FOREVER:
 **NEVER STOP.** Run until interrupted.
 """
 
-_GENERIC_README_MD = """\
+_README_MD = """\
 # {{name}}
 
 {{description}}
@@ -108,7 +106,7 @@ The agent may only modify `solver.py`. All other files are read-only.
 Built with [helix](https://github.com/VectorInstitute/helix).
 """
 
-_GENERIC_SOLVER_PY = """\
+_SOLVER_PY = """\
 \"\"\"Solver — modify this file freely.\"\"\"
 
 
@@ -121,7 +119,7 @@ if __name__ == "__main__":
     print(f"score: {solve():.4f}")
 """
 
-_GENERIC_EVALUATE_PY = """\
+_EVALUATE_PY = """\
 \"\"\"Evaluation harness — do not modify.
 
 Runs the solver and prints machine-readable results.
@@ -143,149 +141,11 @@ if __name__ == "__main__":
     print(f"time_elapsed: {elapsed:.1f}")
 """
 
-_AI_INFERENCE_HELIX_YAML = """\
-name: {{name}}
-version: 1.0.0
-domain: AI/ML
-description: >
-  {{description}}
-
-scope:
-  editable:
-    - infer.py
-  readonly:
-    - prepare.py
-    - helix.yaml
-    - program.md
-
-metrics:
-  primary:
-    name: tokens_per_sec
-    optimize: maximize
-  quality_guard:
-    name: bpb
-    optimize: minimize
-    max_degradation: 0.01
-  evaluate:
-    command: uv run infer.py
-    timeout_seconds: 300
-    output_format: pattern
-    patterns:
-      primary: '^tokens_per_sec:\\s+([\\d.]+)'
-      quality_guard: '^bpb:\\s+([\\d.]+)'
-
-requirements:
-  python: ">=3.11"
-  gpu: "GPU recommended"
-"""
-
-_AI_INFERENCE_README_MD = """\
-# {{name}}
-
-{{description}}
-
-## Quickstart
-
-```bash
-pip install helices
-uv run prepare.py   # one-time: download model + dataset
-helix run
-```
-
-## Metrics
-
-**Primary: `tokens_per_sec` (maximize)** — WikiText-2 tokens scored per wall-clock second.
-
-**Quality guard: `bpb` (must not degrade)** — Bits per byte, must stay within 1% of baseline.
-
-## Scope
-
-The agent may only modify `infer.py`. All other files are read-only.
-
----
-
-Built with [helix](https://github.com/VectorInstitute/helix).
-"""
-
-_AI_INFERENCE_PROGRAM_MD = """\
-# {{name}}
-
-{{description}}
-
-## Setup
-
-1. Set `HELIX_MODEL` to your HuggingFace model ID (default: `Qwen/Qwen2.5-0.5B-Instruct`).
-2. Run `uv run prepare.py` once to download the model and cache WikiText-2.
-3. Read `prepare.py` to understand the fixed evaluation harness.
-4. Read `infer.py` to understand the current inference strategy.
-
-## Constraints
-
-- Modify `infer.py` freely: batching, quantization, `torch.compile`, kernel tricks, etc.
-- Do NOT modify `prepare.py`, `helix.yaml`, or `program.md`.
-- Do not fine-tune or modify the model weights.
-- Do not add new dependencies beyond `pyproject.toml`.
-
-## Metrics
-
-**Primary: `tokens_per_sec` (maximize)**
-
-WikiText-2 tokens scored per wall-clock second within the 5-minute budget.
-
-**Quality guard: `bpb` (must not degrade)**
-
-Bits per byte. Must stay within 1% of the baseline. If it rises, discard the experiment.
-
-## Output format
-
-```
----
-tokens_per_sec:   1240.5
-bpb:              0.9753
-chunks_processed: 620
-time_elapsed:     300.1
-```
-
-Extract metrics with: `grep "tokens_per_sec:\\|bpb:" run.log`
-
-## Logging results
-
-Write to `results.tsv` (tab-separated, do not git-commit). Header:
-
-```
-commit	tokens_per_sec	bpb	status	description
-```
-
-## Experiment loop
-
-LOOP FOREVER:
-
-1. Choose an optimization idea. Do not repeat failed experiments.
-2. Modify `infer.py`.
-3. `git commit` with a short description.
-4. Run: `uv run infer.py > run.log 2>&1 & echo $! > run.pid; wait $!; rm -f run.pid`
-5. Extract results: `grep "tokens_per_sec:\\|bpb:" run.log`
-6. If results are empty: crashed. Check `tail -n 50 run.log`. Fix or move on.
-7. Append a row to `results.tsv` (tab-separated).
-   - `status` must be exactly `keep`, `discard`, or `crash` — no other values.
-8. If `tokens_per_sec` improved AND `bpb` did not degrade: **keep** (commit stays). Status = `keep`.
-9. Otherwise: **discard** (`git reset --hard HEAD~1`). Status = `discard`.
-
-**NEVER STOP.** Run until interrupted.
-"""
-
-#: Map from template name to {filename: content} dict.
-TEMPLATES: dict[str, dict[str, str]] = {
-    "generic": {
-        "README.md": _GENERIC_README_MD,
-        "helix.yaml": _GENERIC_HELIX_YAML,
-        "program.md": _GENERIC_PROGRAM_MD,
-        "solver.py": _GENERIC_SOLVER_PY,
-        "evaluate.py": _GENERIC_EVALUATE_PY,
-    },
-    "ai-inference": {
-        "README.md": _AI_INFERENCE_README_MD,
-        "helix.yaml": _AI_INFERENCE_HELIX_YAML,
-        "program.md": _AI_INFERENCE_PROGRAM_MD,
-    },
+#: Files created by ``helix init``.
+TEMPLATE: dict[str, str] = {
+    "README.md": _README_MD,
+    "helix.yaml": _HELIX_YAML,
+    "program.md": _PROGRAM_MD,
+    "solver.py": _SOLVER_PY,
+    "evaluate.py": _EVALUATE_PY,
 }

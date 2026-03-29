@@ -12,7 +12,7 @@ from rich.table import Table
 
 from .config import HelixConfig
 from .git import detect_main_branch
-from .init import list_templates, scaffold
+from .init import scaffold
 from .results import read_main_stats, read_results
 from .runner import HelixRunner, find_helix_root
 
@@ -26,31 +26,26 @@ def _today_tag() -> str:
 
 
 def cmd_init(args: argparse.Namespace) -> None:
-    """Scaffold a new helix directory from a template.
+    """Scaffold a new helix directory.
 
     Parameters
     ----------
     args : argparse.Namespace
-        Parsed CLI arguments (``name``, ``template``, ``domain``, ``description``, ``output_dir``).
+        Parsed CLI arguments (``name``, ``domain``, ``description``, ``output_dir``).
     """
     output_dir = Path(args.output_dir) if args.output_dir else Path.cwd()
     try:
         target = scaffold(
             name=args.name,
             output_dir=output_dir,
-            template=args.template,
             domain=args.domain,
             description=args.description,
         )
-    except ValueError as exc:
-        console.print(f"[red]✗[/red] {exc}")
-        sys.exit(1)
     except FileExistsError as exc:
         console.print(f"[red]✗[/red] {exc}")
         sys.exit(1)
 
     console.print(f"[green]✓[/green] Created [bold]{target}[/bold]")
-    console.print(f"  template : {args.template}")
     console.print(f"  domain   : {args.domain}")
     console.print()
     console.print(f"  [dim]cd {target.name} && git init && helix run[/dim]")
@@ -115,7 +110,6 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 def _build_parser() -> argparse.ArgumentParser:
     today = _today_tag()
-    templates = ", ".join(f"'{t}'" for t in list_templates())
 
     parser = argparse.ArgumentParser(
         prog="helix",
@@ -123,13 +117,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    init_p = subparsers.add_parser("init", help="Scaffold a new helix from a template")
+    init_p = subparsers.add_parser("init", help="Scaffold a new helix")
     init_p.add_argument("name", help="Name of the new helix (also used as the directory name)")
-    init_p.add_argument(
-        "--template",
-        default="generic",
-        help=f"Template to use: {templates} (default: 'generic')",
-    )
     init_p.add_argument("--domain", default="General", help="Research domain (default: 'General')")
     init_p.add_argument(
         "--description",
