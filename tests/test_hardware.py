@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import subprocess
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from helix.hardware import detect_hardware
+from helix.runner import HelixRunner
 
 
 def _nvidia_result(names: list[str]) -> MagicMock:
@@ -151,19 +154,47 @@ class TestDetectHardwareFallback:
 
 
 class TestRunnerHardwareEnvVar:
-    def test_env_var_not_overwritten(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def _make_runner(self, tmp_path: Path) -> HelixRunner:
+        with (
+            patch("helix.runner.HelixConfig.load"),
+            patch("helix.runner.detect_main_branch", return_value="main"),
+        ):
+            return HelixRunner(tmp_path, "test", max_turns=1)
+
+    def _run_with_patches(self, runner: HelixRunner, **extra_patches: object) -> dict:
+        """Run runner.run() with all infrastructure patched out. Returns entered mocks."""
+        patches = {
+            "helix.runner.HelixRunner._preflight": None,
+            "helix.runner.read_main_stats": dict,
+            "helix.runner.anyio.run": None,
+            "helix.runner.HelixRunner._post_session": None,
+            "helix.runner.console.print": None,
+            "helix.runner.atexit.register": None,
+            "helix.runner.signal.signal": None,
+            **extra_patches,
+        }
+        mocks: dict = {}
+        with contextlib.ExitStack() as stack:
+            for target, retval in patches.items():
+                kw = {} if retval is None or retval is dict else {"return_value": retval}
+                if retval is dict:
+                    kw = {"return_value": {}}
+                mocks[target] = stack.enter_context(patch(target, **kw))
+            runner.run()
+        return mocks
+
+    def test_env_var_not_overwritten(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """Explicit HELIX_HARDWARE always wins — detect_hardware is never called."""
         monkeypatch.setenv("HELIX_HARDWARE", "My Custom GPU")
-        with patch("helix.runner.detect_hardware") as mock_detect:
-            if "HELIX_HARDWARE" not in os.environ:
-                os.environ["HELIX_HARDWARE"] = mock_detect()
-            assert os.environ["HELIX_HARDWARE"] == "My Custom GPU"
-            mock_detect.assert_not_called()
+        runner = self._make_runner(tmp_path)
+        mocks = self._run_with_patches(runner, **{"helix.runner.detect_hardware": None})
+        mocks["helix.runner.detect_hardware"].assert_not_called()
+        assert os.environ["HELIX_HARDWARE"] == "My Custom GPU"
 
-    def test_env_var_set_when_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_env_var_set_when_missing(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """When env var absent, detect_hardware result is written to HELIX_HARDWARE."""
         monkeypatch.delenv("HELIX_HARDWARE", raising=False)
-        with patch("helix.runner.detect_hardware", return_value="Apple M4 Pro") as mock_detect:
-            if "HELIX_HARDWARE" not in os.environ:
-                os.environ["HELIX_HARDWARE"] = mock_detect()
-            assert os.environ["HELIX_HARDWARE"] == "Apple M4 Pro"
+        runner = self._make_runner(tmp_path)
+        with patch("helix.runner.detect_hardware", return_value="Apple M4 Pro"):
+            self._run_with_patches(runner)
+        assert os.environ["HELIX_HARDWARE"] == "Apple M4 Pro"
