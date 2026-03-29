@@ -12,7 +12,7 @@ from rich.table import Table
 
 from .config import HelixConfig
 from .git import detect_main_branch
-from .init import scaffold
+from .init import run_uv_lock, scaffold
 from .results import read_main_stats, read_results
 from .runner import HelixRunner, find_helix_root
 
@@ -34,19 +34,19 @@ def cmd_init(args: argparse.Namespace) -> None:
         Parsed CLI arguments (``name``, ``domain``, ``description``, ``output_dir``).
     """
     output_dir = Path(args.output_dir) if args.output_dir else Path.cwd()
-    try:
-        target = scaffold(
-            name=args.name,
-            output_dir=output_dir,
-            domain=args.domain,
-            description=args.description,
-        )
-    except FileExistsError as exc:
-        console.print(f"[red]✗[/red] {exc}")
-        sys.exit(1)
+    target = scaffold(
+        name=args.name,
+        output_dir=output_dir,
+        domain=args.domain,
+        description=args.description,
+    )
 
-    console.print(f"[green]✓[/green] Created [bold]{target}[/bold]")
+    uv_ok = run_uv_lock(target)
+
+    console.print(f"[green]✓[/green] Initialised [bold]{target}[/bold]")
     console.print(f"  domain   : {args.domain}")
+    if not uv_ok:
+        console.print("  [yellow]![/yellow]  uv not found — run [dim]uv lock[/dim] manually to pin dependencies")
     console.print()
     console.print(f"  [dim]cd {target.name} && git init && helix run[/dim]")
 

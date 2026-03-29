@@ -1,13 +1,12 @@
-"""Unit tests for helix.init: scaffold() and _render()."""
+"""Unit tests for helix.init: scaffold(), _render(), and run_uv_lock()."""
 
 from __future__ import annotations
 
 from pathlib import Path
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from helix.config import HelixConfig
-from helix.init import _render, scaffold
+from helix.init import _render, run_uv_lock, scaffold
 
 
 class TestRender:
@@ -44,20 +43,44 @@ class TestScaffold:
         assert target.is_dir()
         assert target.name == "myhelix"
 
-    def test_creates_all_files(self, tmp_path: Path) -> None:
+    def test_creates_helix_files(self, tmp_path: Path) -> None:
         target = scaffold("myhelix", tmp_path)
-        assert (target / "README.md").exists()
         assert (target / "helix.yaml").exists()
         assert (target / "program.md").exists()
-        assert (target / "solver.py").exists()
-        assert (target / "evaluate.py").exists()
+        assert (target / "README.md").exists()
         assert (target / "experiments.tsv").exists()
+
+    def test_creates_reproducibility_files(self, tmp_path: Path) -> None:
+        target = scaffold("myhelix", tmp_path)
+        assert (target / "pyproject.toml").exists()
+        assert (target / ".python-version").exists()
+
+    def test_does_not_create_solver_py(self, tmp_path: Path) -> None:
+        target = scaffold("myhelix", tmp_path)
+        assert not (target / "solver.py").exists()
+
+    def test_does_not_create_evaluate_py(self, tmp_path: Path) -> None:
+        target = scaffold("myhelix", tmp_path)
+        assert not (target / "evaluate.py").exists()
 
     def test_name_substituted_in_helix_yaml(self, tmp_path: Path) -> None:
         target = scaffold("coolproject", tmp_path)
         content = (target / "helix.yaml").read_text()
         assert "coolproject" in content
         assert "{{name}}" not in content
+
+    def test_name_substituted_in_pyproject_toml(self, tmp_path: Path) -> None:
+        target = scaffold("coolproject", tmp_path)
+        content = (target / "pyproject.toml").read_text()
+        assert 'name = "coolproject"' in content
+        assert "{{name}}" not in content
+
+    def test_description_substituted_in_pyproject_toml(self, tmp_path: Path) -> None:
+        desc = "Optimize training throughput."
+        target = scaffold("proj", tmp_path, description=desc)
+        content = (target / "pyproject.toml").read_text()
+        assert desc in content
+        assert "{{description}}" not in content
 
     def test_domain_substituted_in_helix_yaml(self, tmp_path: Path) -> None:
         target = scaffold("proj", tmp_path, domain="AI/ML")
@@ -66,11 +89,22 @@ class TestScaffold:
         assert "{{domain}}" not in content
 
     def test_description_substituted_in_program_md(self, tmp_path: Path) -> None:
-        desc = "Optimize inference throughput on WikiText-2."
+        desc = "Optimize inference throughput."
         target = scaffold("proj", tmp_path, description=desc)
         content = (target / "program.md").read_text()
         assert desc in content
         assert "{{description}}" not in content
+
+    def test_python_version_file_contents(self, tmp_path: Path) -> None:
+        target = scaffold("proj", tmp_path)
+        content = (target / ".python-version").read_text().strip()
+        assert content == "3.12"
+
+    def test_pyproject_requires_python(self, tmp_path: Path) -> None:
+        target = scaffold("proj", tmp_path)
+        content = (target / "pyproject.toml").read_text()
+        assert "requires-python" in content
+        assert "3.12" in content
 
     def test_experiments_tsv_has_correct_header(self, tmp_path: Path) -> None:
         target = scaffold("myhelix", tmp_path)
@@ -85,15 +119,10 @@ class TestScaffold:
         assert config.name == "proj"
         assert config.metrics.primary.name == "score"
 
-    def test_returns_path_to_created_dir(self, tmp_path: Path) -> None:
+    def test_returns_path_to_directory(self, tmp_path: Path) -> None:
         result = scaffold("x", tmp_path)
         assert isinstance(result, Path)
         assert result == tmp_path / "x"
-
-    def test_raises_file_exists_error_if_dir_exists(self, tmp_path: Path) -> None:
-        (tmp_path / "x").mkdir()
-        with pytest.raises(FileExistsError, match="already exists"):
-            scaffold("x", tmp_path)
 
     def test_default_domain_is_general(self, tmp_path: Path) -> None:
         target = scaffold("proj", tmp_path)
@@ -105,19 +134,6 @@ class TestScaffold:
         config = HelixConfig.load(target / "helix.yaml")
         assert config.domain == "Robotics"
 
-    def test_readme_name_substituted(self, tmp_path: Path) -> None:
-        target = scaffold("myproject", tmp_path)
-        content = (target / "README.md").read_text()
-        assert "myproject" in content
-        assert "{{name}}" not in content
-
-    def test_readme_description_substituted(self, tmp_path: Path) -> None:
-        desc = "Solve the travelling salesman problem faster."
-        target = scaffold("tsp", tmp_path, description=desc)
-        content = (target / "README.md").read_text()
-        assert desc in content
-        assert "{{description}}" not in content
-
     def test_readme_no_unrendered_placeholders(self, tmp_path: Path) -> None:
         target = scaffold("proj", tmp_path, domain="Robotics", description="Optimize grasping.")
         content = (target / "README.md").read_text()
@@ -127,3 +143,79 @@ class TestScaffold:
         target = scaffold("proj", tmp_path)
         content = (target / "README.md").read_text()
         assert "github.com/VectorInstitute/helix" in content
+
+
+class TestScaffoldNonDestructive:
+    """scaffold() must not overwrite files that already exist."""
+
+    def test_existing_directory_is_not_an_error(self, tmp_path: Path) -> None:
+        (tmp_path / "myhelix").mkdir()
+        target = scaffold("myhelix", tmp_path)
+        assert target.is_dir()
+
+    def test_existing_pyproject_toml_is_not_overwritten(self, tmp_path: Path) -> None:
+        (tmp_path / "myhelix").mkdir()
+        existing = tmp_path / "myhelix" / "pyproject.toml"
+        existing.write_text("[project]\nname = 'custom'\n")
+
+        scaffold("myhelix", tmp_path)
+
+        assert existing.read_text() == "[project]\nname = 'custom'\n"
+
+    def test_existing_python_version_is_not_overwritten(self, tmp_path: Path) -> None:
+        (tmp_path / "myhelix").mkdir()
+        pv = tmp_path / "myhelix" / ".python-version"
+        pv.write_text("3.11\n")
+
+        scaffold("myhelix", tmp_path)
+
+        assert pv.read_text() == "3.11\n"
+
+    def test_missing_helix_files_are_created_alongside_existing_ones(self, tmp_path: Path) -> None:
+        (tmp_path / "proj").mkdir()
+        (tmp_path / "proj" / "pyproject.toml").write_text("[project]\nname = 'existing'\n")
+
+        target = scaffold("proj", tmp_path)
+
+        # helix-specific files were created
+        assert (target / "helix.yaml").exists()
+        assert (target / "program.md").exists()
+        # existing file was preserved
+        assert (target / "pyproject.toml").read_text() == "[project]\nname = 'existing'\n"
+
+    def test_existing_experiments_tsv_is_not_overwritten(self, tmp_path: Path) -> None:
+        (tmp_path / "proj").mkdir()
+        exp = tmp_path / "proj" / "experiments.tsv"
+        exp.write_text("session\tcommit\tscore\tstatus\tdescription\nmar01\tabc\t0.9\tkeep\tfirst\n")
+
+        scaffold("proj", tmp_path)
+
+        assert "mar01" in exp.read_text()
+
+
+class TestRunUvLock:
+    """Tests for run_uv_lock()."""
+
+    def test_returns_true_on_success(self, tmp_path: Path) -> None:
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        with patch("helix.init.subprocess.run", return_value=mock_result) as mock_run:
+            assert run_uv_lock(tmp_path) is True
+        mock_run.assert_called_once_with(["uv", "lock"], cwd=tmp_path, capture_output=True, check=False)
+
+    def test_returns_false_on_nonzero_exit(self, tmp_path: Path) -> None:
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        with patch("helix.init.subprocess.run", return_value=mock_result):
+            assert run_uv_lock(tmp_path) is False
+
+    def test_returns_false_when_uv_not_installed(self, tmp_path: Path) -> None:
+        with patch("helix.init.subprocess.run", side_effect=FileNotFoundError):
+            assert run_uv_lock(tmp_path) is False
+
+    def test_passes_target_as_cwd(self, tmp_path: Path) -> None:
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        with patch("helix.init.subprocess.run", return_value=mock_result) as mock_run:
+            run_uv_lock(tmp_path)
+        assert mock_run.call_args.kwargs["cwd"] == tmp_path

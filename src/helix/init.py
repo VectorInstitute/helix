@@ -1,10 +1,12 @@
 """Scaffold a new helix from the built-in template.
 
-The public entry point is ``scaffold()``. The CLI calls it via ``helix init``.
+The public entry points are ``scaffold()`` and ``run_uv_lock()``.
+The CLI calls them via ``helix init``.
 """
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from .config import HelixConfig
@@ -39,43 +41,71 @@ def scaffold(
     domain: str = "General",
     description: str = "Autonomous research loop.",
 ) -> Path:
-    """Create a new helix directory from the built-in template.
+    """Create or update a helix directory from the built-in template.
+
+    This function is non-destructive: it creates the target directory if it
+    does not exist, but silently skips any file that is already present. This
+    makes it safe to run against an existing repository — only the missing
+    helix files will be added.
 
     Parameters
     ----------
     name : str
-        Helix name — used as the directory name and filled into ``helix.yaml``.
+        Helix name — used as the directory name and filled into template files.
     output_dir : Path
-        Parent directory where the new helix directory will be created.
+        Parent directory where the helix directory lives (or will be created).
     domain : str, optional
-        Research domain written into ``helix.yaml`` (e.g. ``"AI/ML"``).
-        Defaults to ``"General"``.
+        Research domain written into ``helix.yaml``. Defaults to ``"General"``.
     description : str, optional
-        One-line description written into ``helix.yaml`` and ``program.md``.
+        One-line description written into template files.
         Defaults to ``"Autonomous research loop."``.
 
     Returns
     -------
     Path
-        Path to the created helix directory.
-
-    Raises
-    ------
-    FileExistsError
-        If a directory named *name* already exists inside *output_dir*.
+        Path to the helix directory.
     """
     target = output_dir / name
-    if target.exists():
-        raise FileExistsError(f"Directory already exists: {target}")
-
-    target.mkdir(parents=True)
+    target.mkdir(parents=True, exist_ok=True)
 
     substitutions = {"name": name, "domain": domain, "description": description}
     for filename, content in TEMPLATE.items():
-        (target / filename).write_text(_render(content, substitutions))
+        dest = target / filename
+        if dest.exists():
+            continue
+        dest.write_text(_render(content, substitutions))
 
-    # Write experiments.tsv with the correct header derived from the rendered helix.yaml.
-    config = HelixConfig.load(target / "helix.yaml")
-    (target / "experiments.tsv").write_text(_tsv_header(config, include_session=True) + "\n")
+    # experiments.tsv requires the rendered helix.yaml to derive column headers.
+    exp_path = target / "experiments.tsv"
+    helix_yaml = target / "helix.yaml"
+    if not exp_path.exists() and helix_yaml.exists():
+        config = HelixConfig.load(helix_yaml)
+        exp_path.write_text(_tsv_header(config, include_session=True) + "\n")
 
     return target
+
+
+def run_uv_lock(target: Path) -> bool:
+    """Run ``uv lock`` inside *target* to generate a locked dependency file.
+
+    Parameters
+    ----------
+    target : Path
+        Directory containing ``pyproject.toml``.
+
+    Returns
+    -------
+    bool
+        ``True`` if ``uv lock`` succeeded, ``False`` if it failed or if
+        ``uv`` is not installed.
+    """
+    try:
+        result = subprocess.run(
+            ["uv", "lock"],
+            cwd=target,
+            capture_output=True,
+            check=False,
+        )
+        return result.returncode == 0
+    except FileNotFoundError:
+        return False
