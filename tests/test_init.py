@@ -192,6 +192,19 @@ class TestScaffoldNonDestructive:
 
         assert "mar01" in exp.read_text()
 
+    def test_dot_name_scaffolds_into_current_directory(self, tmp_path: Path) -> None:
+        # `helix init .` should scaffold into the given output_dir itself.
+        target = scaffold(".", tmp_path)
+        assert target.resolve() == tmp_path.resolve()
+        assert (tmp_path / "helix.yaml").exists()
+
+    def test_dot_name_uses_directory_name_in_templates(self, tmp_path: Path) -> None:
+        # The directory name, not ".", should appear in helix.yaml.
+        scaffold(".", tmp_path)
+        content = (tmp_path / "helix.yaml").read_text()
+        assert f"name: {tmp_path.name}" in content
+        assert "name: ." not in content
+
 
 class TestRunUvLock:
     """Tests for run_uv_lock()."""

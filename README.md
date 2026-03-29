@@ -35,15 +35,6 @@ helix is agent-agnostic. Pick a backend or bring your own.
 | `GeminiBackend` | `pip install helices` | [Gemini CLI](https://github.com/google-gemini/gemini-cli) |
 | Custom | `pip install helices` | Implement the `AgentBackend` protocol |
 
-### Start from scratch
-
-```bash
-helix init my-project --domain "AI/ML" --description "Optimize X for task Y."
-cd my-project
-git init
-helix run
-```
-
 ### Run an existing helix
 
 ```bash
@@ -72,13 +63,34 @@ back to main.
 
 ## Writing your own helix
 
-1. Create a new git repo.
-2. Add `helix.yaml` describing your metric, evaluation command, and editable scope.
-3. Add `program.md` with domain-specific instructions for the agent.
-4. Add your codebase.
-5. Run `helix run`.
+The typical starting point is an existing research codebase. `helix init` drops the helix
+layer on top without touching your code.
 
-Minimal `helix.yaml`:
+```bash
+cd my-research-project        # your existing git repo
+pip install 'helices[claude]'
+helix init . --domain "AI/ML" --description "Optimize X for task Y."
+```
+
+`helix init` is non-destructive: it skips any file that already exists, so running it
+against a repo with an existing `pyproject.toml` or `uv.lock` is safe.
+
+Then:
+
+1. Edit `helix.yaml`: set `scope.editable` to the files the agent may modify, and set `evaluate.command` to your evaluation script.
+2. Edit `program.md`: describe your codebase, goal, constraints, and techniques to try.
+3. Run `helix run`.
+
+If you are starting from scratch:
+
+```bash
+helix init my-project --domain "AI/ML" --description "Optimize X for task Y."
+cd my-project && git init
+# add your codebase, fill in helix.yaml and program.md, then:
+helix run
+```
+
+### Minimal `helix.yaml`
 
 ```yaml
 name: my-helix
@@ -86,7 +98,7 @@ domain: AI/ML
 description: Optimize X for task Y.
 
 scope:
-  editable: [solver.py]
+  editable: [train.py]
   readonly: [evaluate.py, program.md, helix.yaml]
 
 metrics:
