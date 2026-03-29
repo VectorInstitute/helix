@@ -32,28 +32,36 @@ class TestDetectHardwareNvidia:
             assert detect_hardware() == "NVIDIA A100, NVIDIA H100"
 
     def test_not_found_falls_through(self) -> None:
-        with patch("subprocess.run", side_effect=FileNotFoundError):
-            with patch("platform.system", return_value="Linux"):
-                with patch("platform.processor", return_value="x86_64"):
-                    assert detect_hardware() == "x86_64"
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.processor", return_value="x86_64"),
+        ):
+            assert detect_hardware() == "x86_64"
 
     def test_nonzero_exit_falls_through(self) -> None:
-        with patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "nvidia-smi")):
-            with patch("platform.system", return_value="Linux"):
-                with patch("platform.processor", return_value="x86_64"):
-                    assert detect_hardware() == "x86_64"
+        with (
+            patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "nvidia-smi")),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.processor", return_value="x86_64"),
+        ):
+            assert detect_hardware() == "x86_64"
 
     def test_timeout_falls_through(self) -> None:
-        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("nvidia-smi", 5)):
-            with patch("platform.system", return_value="Linux"):
-                with patch("platform.processor", return_value="x86_64"):
-                    assert detect_hardware() == "x86_64"
+        with (
+            patch("subprocess.run", side_effect=subprocess.TimeoutExpired("nvidia-smi", 5)),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.processor", return_value="x86_64"),
+        ):
+            assert detect_hardware() == "x86_64"
 
     def test_empty_output_falls_through(self) -> None:
-        with patch("subprocess.run", return_value=MagicMock(returncode=0, stdout="\n  \n")):
-            with patch("platform.system", return_value="Linux"):
-                with patch("platform.processor", return_value="x86_64"):
-                    assert detect_hardware() == "x86_64"
+        with (
+            patch("subprocess.run", return_value=MagicMock(returncode=0, stdout="\n  \n")),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.processor", return_value="x86_64"),
+        ):
+            assert detect_hardware() == "x86_64"
 
 
 class TestDetectHardwareMacOS:
@@ -69,15 +77,19 @@ class TestDetectHardwareMacOS:
                 return _sysctl_result("Apple M4 Pro")
             raise FileNotFoundError
 
-        with patch("subprocess.run", side_effect=_side_effect):
-            with patch("platform.system", return_value="Darwin"):
-                assert detect_hardware() == "Apple M4 Pro"
+        with (
+            patch("subprocess.run", side_effect=_side_effect),
+            patch("platform.system", return_value="Darwin"),
+        ):
+            assert detect_hardware() == "Apple M4 Pro"
 
     def test_sysctl_not_found_falls_through(self) -> None:
-        with patch("subprocess.run", side_effect=FileNotFoundError):
-            with patch("platform.system", return_value="Darwin"):
-                with patch("platform.processor", return_value="arm"):
-                    assert detect_hardware() == "arm"
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.processor", return_value="arm"),
+        ):
+            assert detect_hardware() == "arm"
 
     def test_sysctl_empty_output_falls_through(self) -> None:
         def _side_effect(cmd, **kwargs):
@@ -85,10 +97,12 @@ class TestDetectHardwareMacOS:
                 raise FileNotFoundError
             return MagicMock(returncode=0, stdout="  \n")
 
-        with patch("subprocess.run", side_effect=_side_effect):
-            with patch("platform.system", return_value="Darwin"):
-                with patch("platform.processor", return_value="arm"):
-                    assert detect_hardware() == "arm"
+        with (
+            patch("subprocess.run", side_effect=_side_effect),
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.processor", return_value="arm"),
+        ):
+            assert detect_hardware() == "arm"
 
     def test_non_darwin_skips_sysctl(self) -> None:
         commands_called: list[list[str]] = []
@@ -97,34 +111,42 @@ class TestDetectHardwareMacOS:
             commands_called.append(list(cmd))
             raise FileNotFoundError
 
-        with patch("subprocess.run", side_effect=_track):
-            with patch("platform.system", return_value="Linux"):
-                with patch("platform.processor", return_value="x86_64"):
-                    detect_hardware()
+        with (
+            patch("subprocess.run", side_effect=_track),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.processor", return_value="x86_64"),
+        ):
+            detect_hardware()
 
         assert not any("sysctl" in cmd for cmd in commands_called)
 
 
 class TestDetectHardwareFallback:
     def test_processor_returned(self) -> None:
-        with patch("subprocess.run", side_effect=FileNotFoundError):
-            with patch("platform.system", return_value="Linux"):
-                with patch("platform.processor", return_value="Intel(R) Core(TM) i9"):
-                    assert detect_hardware() == "Intel(R) Core(TM) i9"
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.processor", return_value="Intel(R) Core(TM) i9"),
+        ):
+            assert detect_hardware() == "Intel(R) Core(TM) i9"
 
     def test_machine_returned_when_processor_empty(self) -> None:
-        with patch("subprocess.run", side_effect=FileNotFoundError):
-            with patch("platform.system", return_value="Linux"):
-                with patch("platform.processor", return_value=""):
-                    with patch("platform.machine", return_value="aarch64"):
-                        assert detect_hardware() == "aarch64"
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.processor", return_value=""),
+            patch("platform.machine", return_value="aarch64"),
+        ):
+            assert detect_hardware() == "aarch64"
 
     def test_unknown_when_all_empty(self) -> None:
-        with patch("subprocess.run", side_effect=FileNotFoundError):
-            with patch("platform.system", return_value="Linux"):
-                with patch("platform.processor", return_value=""):
-                    with patch("platform.machine", return_value=""):
-                        assert detect_hardware() == "unknown"
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError),
+            patch("platform.system", return_value="Linux"),
+            patch("platform.processor", return_value=""),
+            patch("platform.machine", return_value=""),
+        ):
+            assert detect_hardware() == "unknown"
 
 
 class TestRunnerHardwareEnvVar:
