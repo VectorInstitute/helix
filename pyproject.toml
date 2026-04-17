@@ -40,6 +40,9 @@ dev = [
 
 [tool.uv]
 default-groups = ["dev"]
+constraint-dependencies = [
+    "python-multipart>=0.0.26",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
