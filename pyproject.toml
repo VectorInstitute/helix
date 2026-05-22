@@ -41,6 +41,7 @@ dev = [
 [tool.uv]
 default-groups = ["dev"]
 constraint-dependencies = [
+    "idna>=3.15",
     "python-multipart>=0.0.27",
 ]
 
