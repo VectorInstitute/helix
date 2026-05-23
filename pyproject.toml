@@ -43,6 +43,7 @@ default-groups = ["dev"]
 constraint-dependencies = [
     "idna>=3.15",
     "python-multipart>=0.0.27",
+    "starlette>=1.0.1",
 ]
 
 [tool.pytest.ini_options]
