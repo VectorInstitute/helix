@@ -41,6 +41,7 @@ dev = [
 [tool.uv]
 default-groups = ["dev"]
 constraint-dependencies = [
+    "click>=8.3.3",
     "idna>=3.15",
     "pydantic-settings>=2.14.2",
     "pyjwt>=2.13.0",
